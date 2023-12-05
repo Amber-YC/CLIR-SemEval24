@@ -8,8 +8,8 @@ Litschko et al. (2022) proposed a modular and parameter-efficient framework for 
 
 ## Dataset
 We aim to train a model and perform automatic predictions using a portion of the data from Track A and Track C provided by SenEval 2024 Task 1. Specifically, we utilized labeled training set from Track A (where each row consists of PairID, Text, Score) to train the model, only updating parameters within LA. Subsequently, we use this trained model to predict the relatedness score for all sentence pairs in test set from Track C. The languages in Track A and C are as follows: 
-    Track A. amh, arq, ary, eng, esp, hau, mar, tel
-    Track C. afr, amh, arb, arq, eng, esp, hau, hin, mar, tel
-Considering the necessity for compatibility with mBERT, folloing languages are used: 
-    Training data: eng, mar, esp, tel
-    Test Data: afr, arb, hin
+>Track A. amh, arq, ary, **eng**, **esp**, hau, **mar**, **tel**
+>Track C. **afr**, amh, **arb**, arq, **eng**, **esp**, hau, **hin**, **mar**, **tel**
+Considering the necessity for compatibility(**Bold**: supported by mBERT) with mBERT, folloing languages are used: 
+>Training data: eng, esp, mar, tel
+>Test Data: afr, arb, hin
