@@ -36,5 +36,9 @@ if __name__ == "__main__":
     eval_pairs_afr = load_eval_data(eval_file_afr)
 
     train_batches_eng = list(get_batches(5, train_pairs_eng, shuffle=True))
-    encoded_input = tokenizer(train_batches_eng[0], padding=True, return_tensors="pt")
-    print(encoded_input)
+
+    # usage of Transformer
+    encoded_input = miniLM_tokenizer(train_batches_eng[0], padding=True, return_tensors="pt")
+    output = miniLM_model(**encoded_input)
+
+    print(output)
