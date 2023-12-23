@@ -24,13 +24,13 @@ def load_eval_data(path):
     return text_pair
 
 if __name__ == '__main__':
-    train_file = '../data/TrackA_data/eng/eng_train.csv'
-    test_file = '../data/TrackC_data/afr/afr_pilot.csv'
+    train_file = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+    test_file = '../Semantic_Relatedness_SemEval2024-main/Track C/amh/amh_dev.csv'
     train = load_train_data(train_file)
     test = load_eval_data(test_file)
-    print(train[0])
-    print(train[1])
-    print(test)
+    print(train[0]) # a list of tuples consisting of text pairs from training set
+    print(train[1]) # a list of scores of each text_pair from training set
+    print(test) # # a list of tuples consisting of text pairs
 
 
 

@@ -1,6 +1,8 @@
 from transformers import AutoTokenizer, AutoModel
 from preprocessing import load_train_data, load_eval_data
+from sklearn.model_selection import train_test_split
 import sklearn
+
 
 miniLM_tokenizer = AutoTokenizer.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
 miniLM_model = AutoModel.from_pretrained("microsoft/Multilingual-MiniLM-L12-H384")
@@ -30,15 +32,20 @@ def get_batches(batch_size, text_pairs, labels=None, shuffle=True):
 
 
 if __name__ == "__main__":
-    train_file_eng = '../data/TrackA_data/eng/eng_train.csv'
-    eval_file_afr = '../data/TrackC_data/afr/afr_pilot.csv'
+    train_file_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+    #eval_file_afr = '../data/TrackC_data/afr/afr_pilot.csv'
     train_pairs_eng, train_scores_eng = load_train_data(train_file_eng)
-    eval_pairs_afr = load_eval_data(eval_file_afr)
+    #eval_pairs_afr = load_eval_data(eval_file_afr)
 
-    train_batches_eng = list(get_batches(5, train_pairs_eng, shuffle=True))
+    texts_train, texts_val, labels_train, labels_val = train_test_split(train_pairs_eng, train_scores_eng,
+                                                                        test_size=0.2, random_state=42)
+    train_batches_eng = list(get_batches(16, texts_train, labels=labels_train, shuffle=True))
+    #print(train_batches_eng[0])
 
     # usage of Transformer
-    encoded_input = miniLM_tokenizer(train_batches_eng[0], padding=True, return_tensors="pt")
-    output = miniLM_model(**encoded_input)
+    #encoded_input = miniLM_tokenizer(train_batches_eng[0][0], padding=True, return_tensors="pt")
+    encoded_input = tokenizer(train_batches_eng[0][0], padding=True, return_tensors="pt")
 
-    print(output)
+    output = model(**encoded_input)
+
+    print(output)  # last_hidden_state.shape = ([16(batch_size),82(padded sequence length),384(hidden_size)])
