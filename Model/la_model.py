@@ -5,14 +5,15 @@ import sklearn
 from adapters import AutoAdapterModel, AdapterConfig, AdapterType
 
 
-# pre-trained transformer
+# Pre-trained transformer
 tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 model = AutoAdapterModel.from_pretrained("bert-base-multilingual-cased")
 
-# add la layer
+# Add la layer
 config = AdapterConfig.load("pfeiffer", non_linearity="relu", reduction_factor=2)
 la_model = model.load_adapter("en/wiki@ukp", config=config)
 model.set_active_adapters(la_model)
+
 
 
 def get_batches(batch_size, text_pairs, labels=None, shuffle=True):
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     # usage of Transformer
     #encoded_input = miniLM_tokenizer(train_batches_eng[0][0], padding=True, return_tensors="pt")
-    encoded_input = tokenizer(train_batches_eng[0][0], padding=True, return_tensors="pt")
+    encoded_input = tokenizer(train_batches_eng[0][0], padding=True, return_tensors="pt") # train_batches_eng[0][0]: 第0个batch的batch_text_pairs
 
     output = model(**encoded_input)
 
