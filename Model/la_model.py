@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer, AutoModel
-from preprocessing import load_train_data, load_eval_data
+from preprocessing import load_data
 from sklearn.model_selection import train_test_split
 import sklearn
 from adapters import AutoAdapterModel, AdapterConfig, AdapterType
@@ -14,29 +14,6 @@ config = AdapterConfig.load("pfeiffer", non_linearity="relu", reduction_factor=2
 la_model = model.load_adapter("en/wiki@ukp", config=config)
 model.set_active_adapters(la_model)
 
-
-
-def get_batches(batch_size, text_pairs, labels=None, shuffle=True):
-    total_data_size = len(text_pairs)
-    index_ls = [i for i in range(total_data_size)]
-
-    if shuffle:
-        dataset = sklearn.utils.shuffle(index_ls)
-
-    if labels:
-        for start_i in range(0, total_data_size, batch_size):
-            # get batch_texts, batch_labels
-            end_i = min(total_data_size, start_i + batch_size)
-            batch_text_pairs = text_pairs[start_i:end_i]
-            batch_labels = labels[start_i:end_i]
-            yield batch_text_pairs, batch_labels
-
-    else:
-        for start_i in range(0, total_data_size, batch_size):
-            # get batch_texts
-            end_i = min(total_data_size, start_i + batch_size)
-            batch_text_pairs = text_pairs[start_i:end_i]
-            yield batch_text_pairs
 
 
 if __name__ == "__main__":

@@ -72,9 +72,7 @@ def get_pair_encoding(dataset):
     else:
         dataset.set_format(type="torch", columns=['t1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask'])
 
-
     return dataset
-
 
 
 
