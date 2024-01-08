@@ -6,12 +6,22 @@ import re
 import sklearn
 from datasets import load_dataset
 from torch.utils.data import DataLoader
-
+'''
 def load_data(path):
     df = pd.read_csv(path)
     df["pairs"] = df['Text'].apply(lambda x: re.split(r'\n|\t|\\n', x)) # easier to split training and val set
     # always use .apply to deal with df columns/rows
     df.drop("Text", axis="columns")
+    return df
+'''
+def load_data(path):
+    df = pd.read_csv(path) # df: DataFrame
+    # df['Text1'] = df['Text'].apply(lambda x: re.split(r'\n|\t|\\n', x)[0])
+    # df['Text2'] = df['Text'].apply(lambda x: re.split(r'\n|\t|\\n', x)[1])
+    df["pairs"] = df['Text'].apply(lambda x: re.split(r'\n|\t|\\n', x)) # easier to split training and val set
+    # always use .apply to deal with df columns/rows
+    df.drop("Text", axis="columns")
+    # df = df.drop("Text", axis="columns")
     return df
 
 
