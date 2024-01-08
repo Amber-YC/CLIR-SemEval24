@@ -37,6 +37,7 @@ class BertNN(nn.Module):
             else:
                 param.requires_grad = False
         self.fc1 = nn.Linear(in_features=768, out_features=128)
+        # relu
         self.fc2 = nn.Linear(in_features=128, out_features=64)
         self.sigmoid = nn.Sigmoid()
 
@@ -49,6 +50,7 @@ class BertNN(nn.Module):
         lin2 = self.fc2(self.fc1(out2))
         cos = F.cosine_similarity(lin1, lin2)
         similarity = self.sigmoid(cos)
+        # (cos+1)/2
         #similarity = self.sigmoid(F.cosine_similarity(out1, out2))
         #print(f'cos: {cos}')
         #print(f'sig: {similarity}')
@@ -61,7 +63,7 @@ model = BertNN(transformer_model=bertmodel)
 
 """hyper params for training"""
 lr = 0.001
-batch_size = 110
+batch_size = 1
 epochs = 10
 loss_fn = nn.MSELoss()
 opt = torch.optim.Adam(model.parameters(),lr=lr)
@@ -108,6 +110,6 @@ def train_model(input_data, epochs=epochs, opt=opt):
 
 
 if __name__=="__main__":
-    eng_tiny_dataset = eng_dataset.train_test_split(test_size=0.80, shuffle=True, seed=42)['train']
+    eng_tiny_dataset = eng_dataset.train_test_split(test_size=0.998, shuffle=True, seed=42)['train']
     print(eng_tiny_dataset)
     train_model(eng_tiny_dataset, epochs=epochs)
