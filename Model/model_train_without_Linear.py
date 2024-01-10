@@ -17,7 +17,7 @@ import wandb
 from sklearn.metrics import mean_squared_error
 
 """load english training and eval data"""
-tracka_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+tracka_eng = '../data/Track A/eng/eng_train.csv'
 eng_data = load_data(tracka_eng)
 eng_dataset = Dataset.from_pandas(eng_data[["pairs", "Score"]])
 
@@ -163,15 +163,15 @@ def predict(model, input_ids1, attention_mask1, input_ids2, attention_mask2):
 
 
 # """load arb language data"""
-# trackc_arb_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/arb/arb_dev.csv'
+# trackc_arb_dev = '../data/Track C/arb/arb_dev.csv'
 # arb_data = load_data(trackc_arb_dev)
 #
 # """load amh language data"""
-# trackc_amh_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/amh/amh_dev.csv'
+# trackc_amh_dev = '../data/Track C/amh/amh_dev.csv'
 # amh_data = load_data(trackc_arb_dev)
 #
 # """load ind language data"""
-# trackc_ind_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/ind/ind_dev.csv'
+# trackc_ind_dev = '../data/Track C/ind/ind_dev.csv'
 # ind_data = load_data(trackc_ind_dev)
 
 

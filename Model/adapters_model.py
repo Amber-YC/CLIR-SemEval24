@@ -77,7 +77,7 @@ def get_pair_encoding(dataset):
 
 
 if __name__ == "__main__":
-    train_file_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+    train_file_eng = '../data/Track A/eng/eng_train.csv'
     eng_test_data = load_data(train_file_eng)[:5]
     eng_test_dataset = Dataset.from_pandas(eng_test_data)
     eng_test_dataset = get_pair_encoding(eng_test_dataset)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     print("eng_last_hidden_size", last_hidden_state_shape)
 
 
-    aim_file_ind = '../Semantic_Relatedness_SemEval2024-main/Track C/ind/ind_dev.csv'
+    aim_file_ind = '../data/Track C/ind/ind_dev.csv'
     ind_data = load_data(aim_file_ind)[:5]
     ind_test_dataset = Dataset.from_pandas(ind_data)
     ind_test_dataset = get_pair_encoding(ind_test_dataset)

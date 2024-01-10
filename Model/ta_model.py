@@ -18,7 +18,7 @@ def encode_batch(batch):
   encoded_text = tokenizer(batch, max_length=80, truncation=True, padding="max_length", return_tensors="pt")
   return encoded_text
 
-train_file_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+train_file_eng = '../data/Track A/eng/eng_train.csv'
 train_pairs_eng, train_scores_eng = load_train_data(train_file_eng)
 texts_train, texts_val, labels_train, labels_val = train_test_split(train_pairs_eng, train_scores_eng,
                                                                         test_size=0.2, random_state=42)

@@ -17,7 +17,7 @@ model.set_active_adapters(la_model)
 
 
 if __name__ == "__main__":
-    train_file_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+    train_file_eng = '../data/Track A/eng/eng_train.csv'
     #eval_file_afr = '../data/TrackC_data/afr/afr_pilot.csv'
     train_pairs_eng, train_scores_eng = load_train_data(train_file_eng)
     #eval_pairs_afr = load_eval_data(eval_file_afr)
