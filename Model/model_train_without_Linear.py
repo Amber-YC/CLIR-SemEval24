@@ -12,7 +12,9 @@ from datasets import Dataset
 from torch import nn
 from torch.nn import functional as F
 from tqdm import tqdm
-
+import sklearn
+import wandb
+from sklearn.metrics import mean_squared_error
 
 """load english training and eval data"""
 tracka_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
@@ -83,32 +85,39 @@ class BertNN(nn.Module):
         # f21 = self.fc2(F.relu(f11))
         # f22 = self.fc2(F.relu(f12))
         # print(f21.size(), f22.size())
-        #print(F.cosine_similarity(out1, out2))
-        print(f'cos: {F.cosine_similarity(out1, out2)}')
-        # cosine is always 1, why?
-        similarity = self.sigmoid(F.cosine_similarity(out1, out2))
-        print(f'sig:{similarity}')
+        cos_sim = F.cosine_similarity(out1, out2)
+        #print(cos_sim)
+        similarity = (cos_sim + 1) / 2
 
-        #return similarity
-        return out1, similarity
+        return similarity
 
 eng_adapter = set_lang_adapter("en/wiki@ukp")
 bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
 model = BertNN(transformer_model=bertmodel)
 
 """hyper params for training"""
-lr = 0.1
+lr = 0.001
 batch_size = 2
-epochs = 2
+epochs = 100
 loss_fn = nn.MSELoss()
 opt = torch.optim.Adam(model.parameters(),lr=lr)
 print(eng_split['train'])
 
 """train the model"""
 def train_model(input_data, epochs=epochs, opt=opt):
+    best_model = None
+    best_dev_error = 0.0
+    wandb.init(project = "CLIR - Semantic Relatedness Score")
+    dev_input = input_data['test']
+    dev_input_ids1 = dev_input['t1_input_ids']
+    dev_attention_mask1 = dev_input['t1_attention_mask']
+    dev_input_ids2 = dev_input['t2_input_ids']
+    dev_attention_mask2 = dev_input['t2_attention_mask']
+    dev_labels = dev_input['labels']
+
     for epoch in range(epochs):
         total_loss = 0.0
-        train_input = get_batches(batch_size=batch_size, data=input_data)
+        train_input = get_batches(batch_size=batch_size, data=input_data['train'])
         batch_num = len(train_input)
         # print(train_input)
         for batch in tqdm(train_input, total=batch_num, desc="Training", ncols=80):
@@ -119,20 +128,37 @@ def train_model(input_data, epochs=epochs, opt=opt):
             input_ids2 = batch['t2_input_ids']
             attention_mask2 = batch['t2_attention_mask']
             labels = batch['labels']
-            # print("Inputs shape: ",inputs.shape)
-            out1 = model(input_ids1, attention_mask1, input_ids2, attention_mask2)[0]
-            outputs = model(input_ids1, attention_mask1, input_ids2, attention_mask2)[1]
-            #print(outputs, labels)
-            print(f'output: {outputs}, label:{labels}')
+            outputs = model(input_ids1, attention_mask1, input_ids2, attention_mask2)
+            # print(f'output: {outputs}, label:{labels}')
             loss = loss_fn(outputs, labels)
-            print(f'loss: {loss.item()}')
             loss.backward()
             opt.step()
 
             total_loss += loss.item()
-        average_loss = total_loss/ batch_num
 
-        print(f'Epoch {epoch + 1}/{epochs}, Loss: {average_loss}')
+            dev_predictions = predict(model, dev_input_ids1, dev_attention_mask1, dev_input_ids2, dev_attention_mask2)
+            dev_error = mean_squared_error(dev_labels, dev_predictions)
+
+            if dev_error < best_dev_error:
+                best_dev_error = dev_error
+                best_model = model.state_dict()  # store the model with smallest squared mse on val data
+            wandb.log({"loss": average_loss, "dev_error": dev_error, "best_dev_error": best_dev_error})
+
+        wandb.finish()
+
+        average_loss = total_loss / batch_num
+        if epoch % 10 == 0:
+            print(f'Epoch {epoch + 1}/{epochs}, Loss: {average_loss}')
+
+def predict(model, input_ids1, attention_mask1, input_ids2, attention_mask2):
+    predictions = []
+    model.eval()
+    with torch.no_grad():
+        outputs = model(input_ids1, attention_mask1, input_ids2, attention_mask2)
+        prediction = outputs
+        predictions.extend(prediction.tolist())
+    model.train()
+    return predictions
 
 
 
@@ -150,6 +176,6 @@ def train_model(input_data, epochs=epochs, opt=opt):
 
 
 if __name__=="__main__":
-    eng_tiny_dataset = eng_dataset.train_test_split(test_size=0.998, shuffle=True, seed=42)['train']
+    eng_tiny_dataset = eng_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
     print(eng_tiny_dataset)
     train_model(eng_tiny_dataset, epochs=epochs)
