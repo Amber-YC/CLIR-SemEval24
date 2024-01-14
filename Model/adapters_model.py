@@ -17,6 +17,7 @@ berttokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
 # Load pre-trained BERT model from Hugging Face Hub
 # The `BertAdapterModel` class is specifically designed for working with adapters
 bertmodel = BertAdapterModel.from_pretrained("bert-base-multilingual-cased", output_hidden_states=True)
+
 def set_lang_adapter(lang: str, non_linearity="relu", reduction_factor=2):
     """set language adapter for each language (eng, amh, arb, ind)
     parameters:
