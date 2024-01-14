@@ -16,7 +16,7 @@ import math
 
 
 """load english training and eval data"""
-tracka_eng = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
+tracka_eng = '../data/Track A/eng/eng_train.csv'
 eng_data = load_data(tracka_eng)
 eng_dataset = Dataset.from_pandas(eng_data[["pairs", "Score"]])
 
