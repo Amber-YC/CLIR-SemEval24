@@ -43,8 +43,8 @@ def get_batches(batch_size, data, shuffle=True):
 
 
 if __name__ == '__main__':
-    train_file = '../Semantic_Relatedness_SemEval2024-main/Track A/eng/eng_train.csv'
-    test_file = '../Semantic_Relatedness_SemEval2024-main/Track C/amh/amh_dev.csv'
+    train_file = '../data/Track A/eng/eng_train.csv'
+    test_file = '../data/Track C/amh/amh_dev.csv'
 
     train_data = load_data(train_file)
     test_data = load_data(test_file)
