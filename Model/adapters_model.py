@@ -50,17 +50,17 @@ print("task adapter added.")
 
 
 
-def encode_batch(tidx, batch, tokenizer=berttokenizer):
+def encode_biencoder_batch(tidx, batch, tokenizer=berttokenizer):
     """Encodes a batch of input data using the model tokenizer. tidx= 0 if text1, tidx=1 if text2"""
     text = [pair[tidx] for pair in batch['pairs']]
     encode_text = tokenizer(text, max_length=100, truncation=True, padding="max_length", return_tensors="pt")
     return encode_text
 
 
-def get_pair_encoding(dataset):
+def get_biencoder_encoding(dataset):
 
-    t1_dataset = dataset.map(lambda x: encode_batch(0, x), batched=True)
-    t2_dataset = dataset.map(lambda x: encode_batch(1, x), batched=True)
+    t1_dataset = dataset.map(lambda x: encode_biencoder_batch(0, x), batched=True)
+    t2_dataset = dataset.map(lambda x: encode_biencoder_batch(1, x), batched=True)
     dataset = dataset.add_column('t1_input_ids', t1_dataset["input_ids"])
     dataset = dataset.add_column('t1_attention_mask', t1_dataset["attention_mask"])
     # dataset = dataset.add_column('t1_token_type_ids', t1_dataset["token_type_ids"])
@@ -75,13 +75,31 @@ def get_pair_encoding(dataset):
 
     return dataset
 
+def encode_crossencoder_batch(batch, tokenizer=berttokenizer):
+    """Encodes a batch of input pairs using the model tokenizer for the cross encoder model."""
+    pairs = batch["pairs"]
+    encode_text = tokenizer(pairs, max_length=300, truncation=True, padding="max_length", return_tensors="pt")
+    return encode_text
+
+def get_crossencoder_encoding(dataset):
+    encode_dataset = dataset.map(lambda x: encode_crossencoder_batch(x), batched=True)
+    dataset = dataset.add_column('input_ids', encode_dataset["input_ids"])
+    dataset = dataset.add_column('attention_mask', encode_dataset["attention_mask"])
+
+    if "Score" in dataset.column_names:
+        dataset = dataset.rename_column("Score", "labels")
+        dataset.set_format(type="torch", columns=['input_ids', 'attention_mask', "labels"])
+    else:
+        dataset.set_format(type="torch", columns=['input_ids', 'attention_mask'])
+
+    return dataset
 
 
 if __name__ == "__main__":
     train_file_eng = '../data/Track A/eng/eng_train.csv'
     eng_test_data = load_data(train_file_eng)[:5]
     eng_test_dataset = Dataset.from_pandas(eng_test_data)
-    eng_test_dataset = get_pair_encoding(eng_test_dataset)
+    eng_test_dataset = get_biencoder_encoding(eng_test_dataset)
     eng_input_ids1, eng_attention_mask1, eng_input_ids2, eng_attention_mask2, eng_labels = eng_test_dataset['t1_input_ids'], \
                                                                        eng_test_dataset['t1_attention_mask'], \
                                                                        eng_test_dataset['t2_input_ids'], \
@@ -99,7 +117,7 @@ if __name__ == "__main__":
     aim_file_ind = '../data/Track C/ind/ind_dev.csv'
     ind_data = load_data(aim_file_ind)[:5]
     ind_test_dataset = Dataset.from_pandas(ind_data)
-    ind_test_dataset = get_pair_encoding(ind_test_dataset)
+    ind_test_dataset = get_biencoder_encoding(ind_test_dataset)
     ind_input_ids1, ind_attention_mask1, ind_input_ids2, ind_attention_mask2 = ind_test_dataset['t1_input_ids'], \
                                                                        ind_test_dataset['t1_attention_mask'], \
                                                                        ind_test_dataset['t2_input_ids'], \
