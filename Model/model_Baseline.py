@@ -25,11 +25,11 @@ eng_dataset = get_crossencoder_encoding(eng_dataset)
 eng_split = eng_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
 # print(eng_split)
 
-class CrossEncoderNN(nn.Module):
+class BaselineNN(nn.Module):
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
-        self.model.train_adapter("STR")  # Freeze all model weights except of those of this adapter
+        #self.model.train_adapter("STR")  # Freeze all model weights except of those of this adapter
         self.classifier = nn.Linear(in_features=768, out_features=1)
         self.sigmoid = nn.Sigmoid()
 
@@ -59,11 +59,11 @@ class CrossEncoderNN(nn.Module):
         return math.exp(avg_loss), avg_loss
 
 
-eng_adapter = set_lang_adapter("en/wiki@ukp")
+#eng_adapter = set_lang_adapter("en/wiki@ukp")
 
 # model.add_classification_head("STR", )
-bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))  # Set the adapters(la+ta) to be used in every forward pass
-model = CrossEncoderNN(transformer_model=bertmodel)
+#bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))  # Set the adapters(la+ta) to be used in every forward pass
+model = BaselineNN(transformer_model=bertmodel)
 
 """hyper params for training"""
 lr = 0.001
@@ -75,9 +75,9 @@ print(eng_split['train'])
 
 """train the model"""
 def train_model(train_data, test_data, epochs=epochs, opt=opt):
-    model_save_name = 'eng-crossencoder-model.pt'
+    model_save_name = 'eng-baseline-model.pt'
 
-    best_model = CrossEncoderNN(transformer_model=bertmodel)
+    best_model = BaselineNN(transformer_model=bertmodel)
     best_epoch = 0
     best_validation_perplexity = 100000.
 
