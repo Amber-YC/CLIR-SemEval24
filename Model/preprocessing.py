@@ -29,7 +29,10 @@ def get_batches(batch_size, data, shuffle=True):
     #     batch_text_pairs = data[start_i:end_i]
     #     yield batch_text_pairs
     data_loader = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
-    return data_loader
+    #return data_loader
+    # RAM issue
+    for batch in data_loader:
+            yield batch
 
 
 
