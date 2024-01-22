@@ -13,7 +13,7 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import tqdm
 import math
-
+import wandb
 
 """load english training and eval data"""
 tracka_eng = '../data/Track A/eng/eng_train.csv'
@@ -48,15 +48,20 @@ class CrossEncoderNN(nn.Module):
         total_loss = 0.0
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
-        for batch in tqdm(test_input, total=batch_num, desc="Evaluation", ncols=80):
-            input_ids = batch['input_ids']
-            attention_mask = batch['attention_mask']
-            labels = batch['labels']
-            outputs = self.forward(input_ids, attention_mask)
 
-            total_loss += loss_fn(outputs, labels)
-        avg_loss = total_loss/batch_num
-        return math.exp(avg_loss), avg_loss
+        with torch.no_grad():
+            for batch in tqdm(test_input, total=batch_num, desc="Evaluation", ncols=80):
+                input_ids = batch['input_ids']
+                attention_mask = batch['attention_mask']
+                labels = batch['labels']
+
+                outputs = self.forward(input_ids, attention_mask)
+                total_loss += loss_fn(outputs, labels)
+
+        avg_loss = total_loss / batch_num
+        perplexity = math.exp(avg_loss)
+
+        return perplexity, avg_loss
 
 
 eng_adapter = set_lang_adapter("en/wiki@ukp")
@@ -72,6 +77,11 @@ epochs = 3
 loss_fn = nn.MSELoss()
 opt = torch.optim.Adam(model.parameters(), lr=lr)
 print(eng_split['train'])
+
+"""train the model"""
+
+# Initialize wandb
+wandb.init(project="SemEval_CrossEncoder_eng")
 
 """train the model"""
 def train_model(train_data, test_data, epochs=epochs, opt=opt):
@@ -104,6 +114,9 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
 
         # Evaluate and print accuracy at end of each epoch
         validation_perplexity, validation_loss = model.evaluate(test_data)
+
+        # Log metrics to wandb
+        wandb.log({"epoch": epoch+1, "training average loss": average_loss, "Validation loss": validation_loss})
 
         # remember best model:
         if validation_perplexity < best_validation_perplexity:
