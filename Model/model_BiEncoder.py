@@ -61,20 +61,17 @@ class BiEncoderNN(nn.Module):
         total_loss = 0.0
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
-
         with torch.no_grad():
             for batch in tqdm(test_input, total=batch_num, desc="Evaluation", ncols=80):
-                input_ids = batch['input_ids']
-                attention_mask = batch['attention_mask']
+                input_ids1 = batch['t1_input_ids']
+                attention_mask1 = batch['t1_attention_mask']
+                input_ids2 = batch['t2_input_ids']
+                attention_mask2 = batch['t2_attention_mask']
                 labels = batch['labels']
-
-                outputs = self.forward(input_ids, attention_mask)
+                outputs = self.forward(input_ids1, attention_mask1, input_ids2, attention_mask2)
                 total_loss += loss_fn(outputs, labels)
-
         avg_loss = total_loss / batch_num
-        perplexity = math.exp(avg_loss)
-
-        return perplexity, avg_loss
+        return math.exp(avg_loss), avg_loss
 
 
 eng_adapter = set_lang_adapter("en/wiki@ukp")
