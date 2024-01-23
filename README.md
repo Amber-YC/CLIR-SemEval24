@@ -17,7 +17,7 @@ We aim to train a model and perform automatic predictions using a portion of the
 >Track A. amh, arq, ary, **eng**, **esp**, hau, **mar**, **tel** \
 >Track C. **afr**, amh, **arb**, arq, **eng**, **esp**, hau, **hin**, **mar**, **tel**
 
-Considering the necessity for compatibility(**Bold**: supported by mBERT) with mBERT, folloing languages are used:
+Considering the necessity for compatibility(**Bold**: supported by mBERT) with mBERT, following languages are used:
 
 >Training data: eng, esp, mar, tel \
 >Test Data: afr, arb, hin

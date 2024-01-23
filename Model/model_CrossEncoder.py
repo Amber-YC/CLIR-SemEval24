@@ -18,7 +18,7 @@ import wandb
 """load english training and eval data"""
 tracka_eng = '../data/Track A/eng/eng_train.csv'
 eng_data = load_data(tracka_eng)
-eng_dataset = Dataset.from_pandas(eng_data[["pairs", "Score"]])
+eng_dataset = Dataset.from_pandas(eng_data[['PairID', "pairs", "Score"]])
 
 eng_dataset = get_crossencoder_encoding(eng_dataset)
 # print(eng_dataset)
@@ -58,13 +58,33 @@ class CrossEncoderNN(nn.Module):
                 outputs = self.forward(input_ids, attention_mask)
                 total_loss += loss_fn(outputs, labels)
 
+
         avg_loss = total_loss / batch_num
         perplexity = math.exp(avg_loss)
 
         return perplexity, avg_loss
 
+    def predict(self, test_data):
+        self.eval()
+        test_input = get_batches(batch_size=batch_size, data=test_data)
+        batch_num = len(test_input)
+        scores = []
+        sample_ids = []
 
-eng_adapter = set_lang_adapter("en/wiki@ukp")
+        with torch.no_grad():
+            for batch in tqdm(test_input, total=batch_num, desc="Prediction", ncols=80):
+                input_ids = batch['input_ids']
+                attention_mask = batch['attention_mask']
+
+                outputs = self.forward(input_ids, attention_mask)
+
+                scores.extend(outputs.cpu().numpy())
+                sample_ids.extend(batch['PairID'])
+
+        return scores, sample_ids
+
+
+eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
 
 # model.add_classification_head("STR", )
 bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))  # Set the adapters(la+ta) to be used in every forward pass
@@ -85,7 +105,7 @@ wandb.init(project="SemEval_CrossEncoder_eng")
 
 """train the model"""
 def train_model(train_data, test_data, epochs=epochs, opt=opt):
-    model_save_name = 'eng-crossencoder-model.pt'
+    model_save_name = 'crossencoder_model.pt'
 
     best_model = CrossEncoderNN(transformer_model=bertmodel)
     best_epoch = 0
@@ -125,7 +145,7 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
             best_validation_perplexity = validation_perplexity
 
             # always save best model
-            torch.save(model.state_dict(), model_save_name)
+            torch.save(bertmodel.state_dict(), model_save_name)
         # print losses
         print(f"training loss: {average_loss}")
         print(f"validation loss: {validation_loss}")
@@ -133,7 +153,7 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
 
     # load best model and do final test
     loaded_model_state_dict = torch.load(model_save_name)
-    best_model.load_state_dict(loaded_model_state_dict)
+    best_model = CrossEncoderNN(transformer_model=bertmodel.load_state_dict(loaded_model_state_dict))
     test_perplexity, test_loss = best_model.evaluate(test_data)
 
     # print final score

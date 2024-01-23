@@ -18,7 +18,7 @@ berttokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
 # The `BertAdapterModel` class is specifically designed for working with adapters
 bertmodel = BertAdapterModel.from_pretrained("bert-base-multilingual-cased", output_hidden_states=True)
 
-def set_lang_adapter(lang: str, non_linearity="relu", reduction_factor=2):
+def set_lang_adapter(model, lang: str, non_linearity="relu", reduction_factor=2):
     """set language adapter for each language (eng, amh, arb, ind)
     parameters:
     - lang: pretrained-adapter name for each language,
@@ -36,10 +36,10 @@ def set_lang_adapter(lang: str, non_linearity="relu", reduction_factor=2):
 
     """
     config = AdapterConfig.load("pfeiffer", non_linearity=non_linearity, reduction_factor=reduction_factor)
-    lang_adapter = bertmodel.load_adapter(lang, config=config, with_head=False) # language adapters are loaded but not activated
+    lang_adapter = model.load_adapter(lang, config=config, with_head=False) # language adapters are loaded but not activated
     print(f"{lang} language adapter loaded.")
     return lang_adapter
-
+# add model as parameter
 
 """add task adapter"""
 adapter_config = BnConfig(mh_adapter=False, output_adapter=True, reduction_factor=16, non_linearity="relu")
@@ -47,8 +47,10 @@ task_adapter = bertmodel.add_adapter("STR", config=adapter_config)
 # bertmodel.add_classification_head("STR", num_labels=3)
 print("task adapter added.")
 
-
-
+# add language adapters
+arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp")
+amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp")
+ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp")
 
 def encode_biencoder_batch(tidx, batch, tokenizer=berttokenizer):
     """Encodes a batch of input data using the model tokenizer. tidx= 0 if text1, tidx=1 if text2"""
@@ -69,9 +71,9 @@ def get_biencoder_encoding(dataset):
     # dataset = dataset.add_column('t2_token_type_ids', t2_dataset["token_type_ids"])
     if "Score" in dataset.column_names:
         dataset = dataset.rename_column("Score", "labels")
-        dataset.set_format(type="torch", columns=['t1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask', "labels"])
+        dataset.set_format(type="torch", columns=['PairID', 't1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask', "labels"])
     else:
-        dataset.set_format(type="torch", columns=['t1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask'])
+        dataset.set_format(type="torch", columns=['PairID','t1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask'])
 
     return dataset
 
@@ -88,11 +90,12 @@ def get_crossencoder_encoding(dataset):
 
     if "Score" in dataset.column_names:
         dataset = dataset.rename_column("Score", "labels")
-        dataset.set_format(type="torch", columns=['input_ids', 'attention_mask', "labels"])
+        dataset.set_format(type="torch", columns=['PairID', 'input_ids', 'attention_mask', "labels"])
     else:
-        dataset.set_format(type="torch", columns=['input_ids', 'attention_mask'])
+        dataset.set_format(type="torch", columns=['PairID', 'input_ids', 'attention_mask'])
 
     return dataset
+
 
 
 if __name__ == "__main__":
@@ -106,7 +109,7 @@ if __name__ == "__main__":
                                                                        eng_test_dataset['t2_attention_mask'], \
                                                                        eng_test_dataset['labels']
     # print("Inputs shape: ",inputs.shape)
-    eng_adapter = set_lang_adapter("en/wiki@ukp")
+    eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
     bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
     batch_output = bertmodel(eng_input_ids2, eng_attention_mask2, output_hidden_states=True)
     last_hidden_state_shape = batch_output.hidden_states[-1].size()
@@ -123,7 +126,7 @@ if __name__ == "__main__":
                                                                        ind_test_dataset['t2_input_ids'], \
                                                                        ind_test_dataset['t2_attention_mask']
     # print("Inputs shape: ",inputs.shape)
-    id_adapter = set_lang_adapter("id/wiki@ukp")
+    id_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp")
     bertmodel.set_active_adapters(ac.Stack(id_adapter, "STR"))
     batch_output = bertmodel(ind_input_ids2, ind_attention_mask2, output_hidden_states=True)
     last_hidden_state_shape = batch_output.hidden_states[-1].size()
