@@ -163,23 +163,18 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
 
 if __name__ == "__main__":
     """build the model"""
-    # Freeze all model weights except of those of task adapter
-    bertmodel.train_adapter(['STR'])
-    # Set the adapters(la+ta) to be used in every forward pass
-    bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
-    # create an CrossEncoderNN instance
-    cross_model = CrossEncoderNN(transformer_model=bertmodel)
+    baseline_model = CrossEncoderNN(transformer_model=bertmodel)
 
     """hyper params for training"""
     lr = 0.001
     batch_size = 16
     epochs = 2
     loss_fn = nn.MSELoss()
-    opt = torch.optim.Adam(cross_model.parameters(), lr=lr)
+    opt = torch.optim.Adam(baseline_model.parameters(), lr=lr)
 
     """train the model"""
     # Initialize wandb
-    wandb.init(project="SemEval_CrossEncoder_eng")
+    wandb.init(project="SemEval_Baseline_eng")
 
     # create mini dataset
     # tqdm only support DataSet, use '.select' to form mini dataset instead of slices
@@ -188,9 +183,9 @@ if __name__ == "__main__":
     eng_test_dataset_mini = eng_test_dataset.select([i for i in range(5)])
 
     """train STR task adapter on labeled english dataset"""
-    best_model = train_model(cross_model, eng_training_dataset_mini, eng_validation_dataset_mini, epochs=epochs, opt=opt)
+    best_model = train_model(baseline_model, eng_training_dataset_mini, eng_validation_dataset_mini, epochs=epochs,
+                             opt=opt)
     """predict on eng_test_dataset"""
     scores, sample_ids = best_model.predict(eng_test_dataset_mini)
     print(f'scores:{scores}')
     print(f'sample_ids:{sample_ids}')
-
