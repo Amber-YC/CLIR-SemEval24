@@ -48,6 +48,7 @@ task_adapter = bertmodel.add_adapter("STR", config=adapter_config)
 print("task adapter added.")
 
 # add language adapters
+eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
 arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp")
 amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp")
 ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp")
@@ -73,7 +74,7 @@ def get_biencoder_encoding(dataset):
         dataset = dataset.rename_column("Score", "labels")
         dataset.set_format(type="torch", columns=['PairID', 't1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask', "labels"])
     else:
-        dataset.set_format(type="torch", columns=['PairID','t1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask'])
+        dataset.set_format(type="torch", columns=['PairID', 't1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask'])
 
     return dataset
 

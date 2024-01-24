@@ -14,15 +14,19 @@ from torch.nn import functional as F
 from tqdm import tqdm
 import math
 import wandb
+import pandas as pd
 
 """load english training and eval data"""
-tracka_eng = '../data/Track A/eng/eng_train.csv'
-eng_data = load_data(tracka_eng)
-eng_dataset = Dataset.from_pandas(eng_data[["PairID", "pairs", "Score"]])
+eng_train_path = '../data/Track A/eng/eng_train.csv'
+eng_test_path = '../data/Track A/eng/eng_test.csv'
 
-eng_dataset = get_biencoder_encoding(eng_dataset)
-print(eng_dataset)
-eng_split = eng_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
+eng_training_data = load_data(eng_train_path)
+eng_test_data = load_data(eng_test_path)
+
+eng_training_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
+eng_test_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
+
+eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
 # print(eng_split)
 
 class BiEncoderNN(nn.Module):
@@ -56,12 +60,11 @@ class BiEncoderNN(nn.Module):
         #print(f'sig: {similarity}')
         return similarity
 
-    def evaluate(self, test_data):
+    def evaluate(self, eval_data):
         self.eval()
         total_loss = 0.0
-        test_input = get_batches(batch_size=batch_size, data=test_data)
+        test_input = get_batches(batch_size=batch_size, data=eval_data)
         batch_num = len(test_input)
-
 
         with torch.no_grad():
             for batch in tqdm(test_input, total=batch_num, desc="Evaluation", ncols=80):
@@ -73,12 +76,12 @@ class BiEncoderNN(nn.Module):
                 outputs = self.forward(input_ids1, attention_mask1, input_ids2, attention_mask2)
                 total_loss += loss_fn(outputs, labels)
 
-
         avg_loss = total_loss / batch_num
+        perplexity = math.exp(avg_loss)
 
-        return math.exp(avg_loss), avg_loss, scores, sample_ids
+        return perplexity, avg_loss
 
-    def predict(self, test_data):
+    def predict(self, test_data, output_path='../result/eng/eng_biencoder.csv'):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -97,8 +100,13 @@ class BiEncoderNN(nn.Module):
                 scores.extend(outputs.cpu().numpy())
                 sample_ids.extend(batch['PairID'])
 
+        # return scores, sample_ids
 
-        return scores, sample_ids
+        # Create a DataFrame with PairID and Pred_Score columns
+        result_df = pd.DataFrame({'PairID': sample_ids, 'Pred_Score': scores})
+
+        # Save the DataFrame to a CSV file
+        result_df.to_csv(output_path, index=False)
 
 
 eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
@@ -108,7 +116,7 @@ model = BiEncoderNN(transformer_model=bertmodel)
 """hyper params for training"""
 lr = 0.01
 batch_size = 16
-epochs = 3
+epochs = 1
 loss_fn = nn.MSELoss()
 opt = torch.optim.Adam(model.parameters(), lr=lr)
 print(eng_split['train'])
@@ -116,7 +124,7 @@ print(eng_split['train'])
 """train the model"""
 # Initialize wandb
 wandb.init(project="SemEval_BiEncoder_eng")
-def train_model(train_data, test_data, epochs=epochs, opt=opt):
+def train_model(train_data, eval_data, epochs=epochs, opt=opt):
     model_save_name = 'biencoder_model.pt'
 
     best_model = BiEncoderNN(transformer_model=bertmodel)
@@ -145,9 +153,8 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
             total_loss += loss.item()
         average_loss = total_loss/batch_num
 
-
         # Evaluate and print accuracy at end of each epoch
-        validation_perplexity, validation_loss = model.evaluate(test_data)
+        validation_perplexity, validation_loss = model.evaluate(eval_data)
 
         # Log metrics to wandb
         wandb.log({"epoch": epoch + 1, "training average loss": average_loss, "Validation loss": validation_loss})
@@ -159,8 +166,9 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
             best_validation_perplexity = validation_perplexity
 
             # always save best model
-            torch.save(bertmodel.state_dict(), model_save_name) #should be bertmodel/transformer
+            #torch.save(bertmodel.state_dict(), model_save_name) #should be bertmodel/transformer
             #torch.save(model, model_save_name)
+            torch.save(model.state_dict(), model_save_name)
         # print losses
         print(f"training loss: {average_loss}")
         print(f"validation loss: {validation_loss}")
@@ -168,9 +176,11 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
 
     # load best model and do final test
     loaded_model_state_dict = torch.load(model_save_name)
-    best_model = BiEncoderNN(transformer_model=bertmodel.load_state_dict(loaded_model_state_dict))
+    best_model.load_state_dict(loaded_model_state_dict)
+    #best_model = BiEncoderNN(transformer_model=bertmodel.load_state_dict(loaded_model_state_dict))
 
-    test_perplexity, test_loss = best_model.evaluate(test_data)
+    test_perplexity, test_loss = best_model.evaluate(eval_data)
+    #best_model.predict(test_data)
 
     #best_model = torch.load(model_save_name)
     #test_perplexity, test_loss = best_model.evaluate(test_data)
@@ -180,6 +190,8 @@ def train_model(train_data, test_data, epochs=epochs, opt=opt):
     print(f" - using model from epoch {best_epoch} for final evaluation")
     #print(f" - final score: {test_accuracy}")
     print(f" - final score: perplexity={test_perplexity}, validation loss={test_loss}")
+
+    return best_model
 
 
 # """load arb language data"""
@@ -200,9 +212,12 @@ if __name__=="__main__":
 
     eng_train = eng_split['train'].select([i for i in range(100)])
     eng_val = eng_split['test'].select([i for i in range(10)])
+    eng_test = eng_test_dataset[:5]
 
     #eng_train = eng_split['train']
     #eng_val = eng_split['test']
     #print(eng_train[:5])
-    train_model(eng_train, eng_val, epochs=epochs)
+    best_model = train_model(eng_train, eng_val, epochs=epochs)
+    best_model.predict(eng_test)
+
 
