@@ -37,14 +37,11 @@ eng_test_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_test_data[['Pa
 
 eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
 
-# eng_train = eng_split['train'].select([i for i in range(100)])
-# eng_val = eng_split['test'].select([i for i in range(10)])
 
 class Baseline_BiEncodoerNN(nn.Module):
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
-
         self.sigmoid = nn.Sigmoid()
 
 
@@ -52,12 +49,9 @@ class Baseline_BiEncodoerNN(nn.Module):
         # sentence embeddings
         out1 = self.model(input_ids=input_ids1, attention_mask=attention_mask1).hidden_states[-1][:, 0, :] # or [cls] embedding, or cnn + pool
         out2 = self.model(input_ids=input_ids2, attention_mask=attention_mask2).hidden_states[-1][:, 0, :]
-
         cos = F.cosine_similarity(out1, out2)
         similarity = (cos+1) / 2
-
         return similarity
-
     def evaluate(self, eval_data):
         self.eval()
         all_predictions = []
@@ -81,9 +75,7 @@ class Baseline_BiEncodoerNN(nn.Module):
         avg_loss = total_loss / batch_num
         perplexity = math.exp(avg_loss)
         spearman_corr, _ = spearmanr(all_predictions, all_labels)
-
         return perplexity, avg_loss, spearman_corr
-
 
     def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_biencoder_baseline.csv'):
         self.eval()
@@ -193,7 +185,6 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
 # """load ind language data"""
 # trackc_ind_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/ind/ind_dev.csv'
 # ind_data = load_data(trackc_ind_dev)
-
 
 
 if __name__=="__main__":

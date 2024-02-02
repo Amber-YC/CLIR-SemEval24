@@ -27,7 +27,6 @@ logging.basicConfig(level=logging.ERROR)
 
 
 """load english dataset"""
-"""load english dataset"""
 eng_train_path = '../data/Track A/eng/eng_train.csv'
 eng_test_path = '../data/Track A/eng/eng_dev.csv'
 
@@ -198,9 +197,6 @@ if __name__ == "__main__":
     eng_val = eng_split['test'].select([i for i in range(10)])
     eng_test_dataset_mini = eng_test_dataset.select([i for i in range(5)])
 
-    #eng_train = eng_split['train']
-    #eng_val = eng_split['test']
-    #print(eng_train[:5])
     best_model = train_model(baseline_model, eng_train, eng_val, epochs=epochs, opt=opt)
     scores, sample_ids = best_model.predict(eng_test_dataset_mini)
     print(f'scores:{scores}')
