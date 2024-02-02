@@ -16,20 +16,23 @@ from tqdm import tqdm
 import math
 import wandb
 from scipy.stats import spearmanr
+import os
 
 
 """load english dataset"""
 eng_train_path = '../data/Track A/eng/eng_train.csv'
-eng_val_path = '../data/Track A/eng/eng_dev_with_labels.csv'
-eng_test_path = '../data/Track A/eng/eng_test.csv'
+eng_test_path = '../data/Track A/eng/eng_dev.csv'
 
 eng_training_data = load_data(eng_train_path)
-eng_validation_data = load_data(eng_val_path)
+# eng_validation_data = load_data(eng_val_path)
 eng_test_data = load_data(eng_test_path)
 
 eng_training_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
-eng_validation_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_validation_data[["PairID", "pairs", "Score"]]))
+# eng_validation_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_validation_data[["PairID", "pairs", "Score"]]))
 eng_test_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
+
+eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
+
 
 class CrossEncoderNN(nn.Module):
     def __init__(self, transformer_model):
@@ -75,7 +78,7 @@ class CrossEncoderNN(nn.Module):
 
         return perplexity, avg_loss, spearman_corr
 
-    def predict(self, test_data, output_path='../result/eng/eng_crossencoder_res.csv'):
+    def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_crossencoder.csv'):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -96,6 +99,10 @@ class CrossEncoderNN(nn.Module):
         result_df = pd.DataFrame({'PairID': sample_ids, 'Pred_Score': scores})
 
         # Save the DataFrame to a CSV file
+        directory = os.path.dirname(output_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         result_df.to_csv(output_path, index=False)
 
         return scores, sample_ids
@@ -162,18 +169,19 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
 
 
 if __name__ == "__main__":
+
     """build the model"""
-    # Freeze all model weights except of those of task adapter
-    bertmodel.train_adapter(['STR'])
     # Set the adapters(la+ta) to be used in every forward pass
     bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
+    # Freeze all model weights except of those of task adapter
+    bertmodel.train_adapter(['STR'])
     # create an CrossEncoderNN instance
     cross_model = CrossEncoderNN(transformer_model=bertmodel)
 
     """hyper params for training"""
-    lr = 0.001
+    lr = 0.01
     batch_size = 16
-    epochs = 2
+    epochs = 3
     loss_fn = nn.MSELoss()
     opt = torch.optim.Adam(cross_model.parameters(), lr=lr)
 
@@ -183,12 +191,12 @@ if __name__ == "__main__":
 
     # create mini dataset
     # tqdm only support DataSet, use '.select' to form mini dataset instead of slices
-    eng_training_dataset_mini = eng_training_dataset.select([i for i in range(50)])
-    eng_validation_dataset_mini = eng_validation_dataset.select([i for i in range(5)])
+    eng_train = eng_split['train'].select([i for i in range(100)])
+    eng_val = eng_split['test'].select([i for i in range(10)])
     eng_test_dataset_mini = eng_test_dataset.select([i for i in range(5)])
 
     """train STR task adapter on labeled english dataset"""
-    best_model = train_model(cross_model, eng_training_dataset_mini, eng_validation_dataset_mini, epochs=epochs, opt=opt)
+    best_model = train_model(cross_model, eng_train, eng_val, epochs=epochs, opt=opt)
     """predict on eng_test_dataset"""
     scores, sample_ids = best_model.predict(eng_test_dataset_mini)
     print(f'scores:{scores}')

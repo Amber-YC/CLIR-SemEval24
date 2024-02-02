@@ -17,6 +17,11 @@ import wandb
 import pandas as pd
 from scipy.stats import spearmanr
 import os
+import warnings
+import logging
+
+logging.basicConfig(level=logging.ERROR)
+warnings.filterwarnings("ignore")
 
 """load english training and eval data"""
 eng_train_path = '../data/Track A/eng/eng_train.csv'
@@ -35,11 +40,10 @@ eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, s
 # eng_train = eng_split['train'].select([i for i in range(100)])
 # eng_val = eng_split['test'].select([i for i in range(10)])
 
-class BiEncoderNN(nn.Module):
+class Baseline_BiEncodoerNN(nn.Module):
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
-        # self.model.train_adapter("STR") # Freeze all model weights except of those of this adapter
 
         self.sigmoid = nn.Sigmoid()
 
@@ -81,7 +85,7 @@ class BiEncoderNN(nn.Module):
         return perplexity, avg_loss, spearman_corr
 
 
-    def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_biencoder.csv'):
+    def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_biencoder_baseline.csv'):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -114,9 +118,9 @@ class BiEncoderNN(nn.Module):
         return scores, sample_ids
 
 def train_model(model, train_data, val_data, epochs=10, opt=None):
-    model_save_name = 'biencoder_model.pt'
+    model_save_name = 'biencoder_baseline_model.pt'
 
-    best_model = BiEncoderNN(transformer_model=bertmodel)
+    best_model = Baseline_BiEncodoerNN(transformer_model=bertmodel)
 
     best_epoch = 0
     best_validation_perplexity = 100000.
@@ -194,12 +198,9 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
 
 if __name__=="__main__":
     """build the model"""
-    # Set the adapters(la+ta) to be used in every forward pass
-    bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
-    # Freeze all model weights except of those of task adapter
-    bertmodel.train_adapter(['STR'])
-    # create a BiEncoderNN instance
-    model = BiEncoderNN(transformer_model=bertmodel)
+    bertmodel.set_active_adapters(None)
+    # create a Baseline_BiEncoderNN instance
+    model = Baseline_BiEncodoerNN(transformer_model=bertmodel)
 
     """hyper params for training"""
     lr = 0.01
@@ -210,7 +211,7 @@ if __name__=="__main__":
 
     """train the model"""
     # Initialize wandb
-    wandb.init(project="SemEval_BiEncoder_eng")
+    wandb.init(project="SemEval_BiEncoder_Baseline_eng")
 
     # create mini dataset
     # tqdm only support DataSet, use '.select' to form mini dataset instead of slices
@@ -223,6 +224,4 @@ if __name__=="__main__":
     scores, sample_ids = best_model.predict(eng_test_dataset_mini)
     print(f'scores:{scores}')
     print(f'sample_ids:{sample_ids}')
-
-
 

@@ -16,22 +16,32 @@ from tqdm import tqdm
 import math
 import wandb
 from scipy.stats import spearmanr
+import os
+import warnings
+import logging
+
+warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.ERROR)
+
+
 
 
 """load english dataset"""
+"""load english dataset"""
 eng_train_path = '../data/Track A/eng/eng_train.csv'
-eng_val_path = '../data/Track A/eng/eng_dev_with_labels.csv'
-eng_test_path = '../data/Track A/eng/eng_test.csv'
+eng_test_path = '../data/Track A/eng/eng_dev.csv'
 
 eng_training_data = load_data(eng_train_path)
-eng_validation_data = load_data(eng_val_path)
+# eng_validation_data = load_data(eng_val_path)
 eng_test_data = load_data(eng_test_path)
 
 eng_training_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
-eng_validation_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_validation_data[["PairID", "pairs", "Score"]]))
+# eng_validation_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_validation_data[["PairID", "pairs", "Score"]]))
 eng_test_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
 
-class CrossEncoderNN(nn.Module):
+eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
+
+class Baseline_CrossEncoderNN(nn.Module):
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
@@ -75,7 +85,7 @@ class CrossEncoderNN(nn.Module):
 
         return perplexity, avg_loss, spearman_corr
 
-    def predict(self, test_data, output_path='../result/eng/eng_crossencoder_res.csv'):
+    def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_crossencoder_baseline.csv'):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -96,15 +106,18 @@ class CrossEncoderNN(nn.Module):
         result_df = pd.DataFrame({'PairID': sample_ids, 'Pred_Score': scores})
 
         # Save the DataFrame to a CSV file
+        directory = os.path.dirname(output_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         result_df.to_csv(output_path, index=False)
 
         return scores, sample_ids
 
 
 def train_model(model, train_data, val_data, epochs=10, opt=None):
-    model_save_name = 'crossencoder_model.pt'
+    model_save_name = 'crossencoder_baseline_model.pt'
 
-    best_model = CrossEncoderNN(transformer_model=bertmodel)
+    best_model = Baseline_CrossEncoderNN(transformer_model=bertmodel)
     best_epoch = 0
     best_validation_perplexity = 100000.
 
@@ -161,31 +174,35 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
     return best_model
 
 
+
 if __name__ == "__main__":
+
     """build the model"""
-    baseline_model = CrossEncoderNN(transformer_model=bertmodel)
+    bertmodel.set_active_adapters(None)
+    baseline_model = Baseline_CrossEncoderNN(transformer_model=bertmodel)
 
     """hyper params for training"""
-    lr = 0.001
+    lr = 0.01
     batch_size = 16
-    epochs = 2
+    epochs = 3
     loss_fn = nn.MSELoss()
     opt = torch.optim.Adam(baseline_model.parameters(), lr=lr)
 
     """train the model"""
     # Initialize wandb
-    wandb.init(project="SemEval_Baseline_eng")
+    wandb.init(project="SemEval_CrossEncoder_Baseline_eng")
 
     # create mini dataset
     # tqdm only support DataSet, use '.select' to form mini dataset instead of slices
-    eng_training_dataset_mini = eng_training_dataset.select([i for i in range(50)])
-    eng_validation_dataset_mini = eng_validation_dataset.select([i for i in range(5)])
+    eng_train = eng_split['train'].select([i for i in range(100)])
+    eng_val = eng_split['test'].select([i for i in range(10)])
     eng_test_dataset_mini = eng_test_dataset.select([i for i in range(5)])
 
-    """train STR task adapter on labeled english dataset"""
-    best_model = train_model(baseline_model, eng_training_dataset_mini, eng_validation_dataset_mini, epochs=epochs,
-                             opt=opt)
-    """predict on eng_test_dataset"""
+    #eng_train = eng_split['train']
+    #eng_val = eng_split['test']
+    #print(eng_train[:5])
+    best_model = train_model(baseline_model, eng_train, eng_val, epochs=epochs, opt=opt)
     scores, sample_ids = best_model.predict(eng_test_dataset_mini)
     print(f'scores:{scores}')
     print(f'sample_ids:{sample_ids}')
+
