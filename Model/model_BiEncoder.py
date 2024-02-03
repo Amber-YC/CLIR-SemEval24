@@ -18,30 +18,11 @@ import pandas as pd
 from scipy.stats import spearmanr
 import os
 
-"""load english training and eval data"""
-eng_train_path = '../data/Track A/eng/eng_train.csv'
-eng_test_path = '../data/Track A/eng/eng_dev.csv'
-
-eng_training_data = load_data(eng_train_path)
-# eng_validation_data = load_data(eng_val_path)
-eng_test_data = load_data(eng_test_path)
-
-eng_training_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
-# eng_validation_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_validation_data[["PairID", "pairs", "Score"]]))
-eng_test_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
-
-eng_split = eng_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
-
-# eng_train = eng_split['train'].select([i for i in range(100)])
-# eng_val = eng_split['test'].select([i for i in range(10)])
 
 class BiEncoderNN(nn.Module):
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
-        # self.model.train_adapter("STR") # Freeze all model weights except of those of this adapter
-
-        self.sigmoid = nn.Sigmoid()
 
 
     def forward(self, input_ids1, attention_mask1,input_ids2, attention_mask2):
@@ -70,6 +51,7 @@ class BiEncoderNN(nn.Module):
                 attention_mask2 = batch['t2_attention_mask']
                 labels = batch['labels']
                 outputs = self.forward(input_ids1, attention_mask1, input_ids2, attention_mask2)
+                total_loss += loss_fn(outputs, labels)
 
                 all_predictions.extend(outputs.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
@@ -79,7 +61,6 @@ class BiEncoderNN(nn.Module):
         spearman_corr, _ = spearmanr(all_predictions, all_labels)
 
         return perplexity, avg_loss, spearman_corr
-
 
     def predict(self, test_data, batch_size=20, output_path='../result/eng/eng_biencoder.csv'):
         self.eval()
@@ -176,20 +157,6 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
     print(f" - final score: perplexity={val_perplexity}, loss={val_loss}, spearman corr={val_spear}")
 
     return best_model
-
-
-# """load arb language data"""
-# trackc_arb_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/arb/arb_dev.csv'
-# arb_data = load_data(trackc_arb_dev)
-#
-# """load amh language data"""
-# trackc_amh_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/amh/amh_dev.csv'
-# amh_data = load_data(trackc_arb_dev)
-#
-# """load ind language data"""
-# trackc_ind_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/ind/ind_dev.csv'
-# ind_data = load_data(trackc_ind_dev)
-
 
 
 if __name__=="__main__":

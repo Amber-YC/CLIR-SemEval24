@@ -174,18 +174,6 @@ def train_model(model, train_data, val_data, epochs=10, opt=None):
     return best_model
 
 
-# """load arb language data"""
-# trackc_arb_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/arb/arb_dev.csv'
-# arb_data = load_data(trackc_arb_dev)
-#
-# """load amh language data"""
-# trackc_amh_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/amh/amh_dev.csv'
-# amh_data = load_data(trackc_arb_dev)
-#
-# """load ind language data"""
-# trackc_ind_dev = '../Semantic_Relatedness_SemEval2024-main/Track C/ind/ind_dev.csv'
-# ind_data = load_data(trackc_ind_dev)
-
 
 if __name__=="__main__":
     """build the model"""

@@ -6,10 +6,7 @@ from datasets import Dataset
 import torch
 import adapters.composition as ac
 from adapters_model import bertmodel
-from model_CrossEncoder_Baseline import Baseline_CrossEncoderNN
-from model_BiEncoder_Baseline import Baseline_BiEncodoerNN
-from model_BiEncoder import BiEncoderNN
-from model_CrossEncoder import CrossEncoderNN
+from model_build import BiEncoderNN, CrossEncoderNN
 from tqdm import tqdm
 import warnings
 import logging
@@ -42,7 +39,7 @@ def main(lang):
     # encoding
     biencoder_dataset = get_biencoder_encoding(dataset)
     # creat an CrossEncoderNN instance
-    biencoder_baseline_model = Baseline_BiEncodoerNN(bertmodel)
+    biencoder_baseline_model = BiEncoderNN(bertmodel)
     # load fine-tuned model
     loaded_model_state_dict = torch.load('../Model/biencoder_baseline_model.pt')
     biencoder_baseline_model.load_state_dict(loaded_model_state_dict, strict=False)  # "strict=False" necessary, otherwise runtime error
@@ -58,7 +55,7 @@ def main(lang):
     # encoding
     crossencoder_dataset = get_crossencoder_encoding(dataset)
     # creat an CrossEncoderNN instance
-    crossencoder_baseline_model = Baseline_CrossEncoderNN(bertmodel)
+    crossencoder_baseline_model = CrossEncoderNN(bertmodel)
     # load fine-tuned model
     loaded_model_state_dict = torch.load('../Model/crossencoder_baseline_model.pt')
     crossencoder_baseline_model.load_state_dict(loaded_model_state_dict, strict=False)  # "strict=False" necessary, otherwise runtime error
@@ -105,4 +102,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.language)
+    # main('arb')
 

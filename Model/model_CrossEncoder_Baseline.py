@@ -23,9 +23,6 @@ import logging
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR)
 
-
-
-
 """load english dataset"""
 eng_train_path = '../data/Track A/eng/eng_train.csv'
 eng_test_path = '../data/Track A/eng/eng_dev.csv'
