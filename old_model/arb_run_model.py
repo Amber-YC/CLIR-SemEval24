@@ -1,14 +1,13 @@
-from preprocessing import load_data, get_batches
-from adapters_model import get_biencoder_encoding, get_crossencoder_encoding, arb_adapter, amh_adapter, ind_adapter
+from preprocessing import load_data
+from adapters_model import get_biencoder_encoding, get_crossencoder_encoding, arb_adapter
 from datasets import Dataset
 import torch
 import adapters.composition as ac
 from adapters_model import bertmodel
 from model_CrossEncoder_Baseline import Baseline_CrossEncoderNN
-from model_BiEncoder_Baseline import Baseline_BiEncodoerNN
-from model_BiEncoder import BiEncoderNN
+from old_model.model_BiEncoder_Baseline import Baseline_BiEncodoerNN
+from old_model.model_BiEncoder import BiEncoderNN
 from model_CrossEncoder import CrossEncoderNN
-from tqdm import tqdm
 import warnings
 import logging
 
