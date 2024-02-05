@@ -181,7 +181,7 @@ class CrossEncoderNN(nn.Module):
         return scores, sample_ids
 
 """train model"""
-def train_model(model, model_type, model_save_name, train_data, val_data, loss_fn, batch_size=16, epochs=10, opt=None):
+def train_model(model, model_type, model_save_name, train_data, val_data, loss_fn, batch_size=32, epochs=10, opt=None):
 
     if model_type == "biencoder":
         best_model = BiEncoderNN(transformer_model=bertmodel)
@@ -254,7 +254,7 @@ def train_model(model, model_type, model_save_name, train_data, val_data, loss_f
 
     return best_model
 
-def build_and_train(model_name, mini=False, lr=0.01, batch_size=16, epochs=10):
+def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
 
     if mini == True:
         eng_biencoder_train = eng_biencoder_split['train'].select([i for i in range(100)])
@@ -270,9 +270,9 @@ def build_and_train(model_name, mini=False, lr=0.01, batch_size=16, epochs=10):
         eng_biencoder_val = eng_biencoder_split['test']
         eng_biencoder_test = eng_biencoder_test_dataset
 
-        eng_crossencoder_train = eng_biencoder_split['train']
-        eng_crossencoder_val = eng_biencoder_split['test']
-        eng_crossencoder_test = eng_biencoder_test_dataset
+        eng_crossencoder_train = eng_crossencoder_split['train']
+        eng_crossencoder_val = eng_crossencoder_split['test']
+        eng_crossencoder_test = eng_crossencoder_test_dataset
 
     """hyper params for training"""
     loss_fn = nn.MSELoss()
@@ -357,7 +357,8 @@ if __name__ == "__main__":
     # args = parser.parse_args()
     # main(args.dataset_path, args.mini)
 
-    build_and_train("baseline_biencoder", mini=True, epochs=1)
-    build_and_train("baseline_crossencoder", mini=True, epochs=1)
-    build_and_train("biencoder", mini=True, epochs=1)
-    build_and_train("crossencoder", mini=True, epochs=1)
+    # build_and_train("baseline_biencoder", mini=True, epochs=1)
+    # build_and_train("baseline_crossencoder", mini=True, epochs=1)
+    # build_and_train("biencoder", mini=False, epochs=5)
+    build_and_train("crossencoder", mini=False, epochs=3)
+

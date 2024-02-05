@@ -38,7 +38,7 @@ def main(lang):
     """BiEncoder_Baseline"""
     # encoding
     biencoder_dataset = get_biencoder_encoding(dataset)
-    # creat an CrossEncoderNN instance
+    # creat a BiEncoderNN instance
     biencoder_baseline_model = BiEncoderNN(bertmodel)
     # load fine-tuned model
     loaded_model_state_dict = torch.load('../Model/biencoder_baseline_model.pt')
@@ -76,7 +76,7 @@ def main(lang):
     biencoder_model.model.set_active_adapters((ac.Stack(lang_adapter, "STR")))  # set active adapters
 
     # prediction and saving the result
-    biencoder_scores, biencoder_sample_ids = biencoder_model.predict(biencoder_dataset, output_path=f'../result/{lang}/{lang}_crossencoder.csv')
+    biencoder_scores, biencoder_sample_ids = biencoder_model.predict(biencoder_dataset, output_path=f'../result/{lang}/{lang}_biencoder.csv')
     print(f"Run Fine-Tuned BiEncoder Model with Adapters on {lang}: ")
     print(biencoder_scores, biencoder_sample_ids)
 
@@ -90,17 +90,17 @@ def main(lang):
     crossencoder_model.model.set_active_adapters((ac.Stack(lang_adapter, "STR")))
 
     # prediction and saving the result
-    crossencoder_scores, crossencoder_sample_ids = crossencoder_model.predict(crossencoder_dataset, output_path=f'../result/{lang}/{lang}_biencoder.csv')
+    crossencoder_scores, crossencoder_sample_ids = crossencoder_model.predict(crossencoder_dataset, output_path=f'../result/{lang}/{lang}_crossencoder.csv')
     print(f"Run Fine-Tuned CrossEncoder Model with Adapters on {lang}: ")
     print(crossencoder_scores, crossencoder_sample_ids)
 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run model on different datasets.")
-    parser.add_argument("--language", "-l", type=str, required=True, choices=["arb", "amh", "ind", "eng"], help="Test Language")
-
-    args = parser.parse_args()
-    main(args.language)
-    # main('arb')
+    # parser = argparse.ArgumentParser(description="Run model on different datasets.")
+    # parser.add_argument("--language", "-l", type=str, required=True, choices=["arb", "amh", "ind", "eng"], help="Test Language")
+    #
+    # args = parser.parse_args()
+    # main(args.language)
+    main('arb')
 
