@@ -1,7 +1,9 @@
+import argparse
+
 from sklearn.model_selection import train_test_split
 from preprocessing import load_data, get_batches
-import adapters_model
-from adapters_model import berttokenizer, bertmodel, encode_biencoder_batch, set_lang_adapter, get_crossencoder_encoding, get_biencoder_encoding, eng_adapter
+import model_adapters
+from model_adapters import berttokenizer, bertmodel, encode_biencoder_batch, set_lang_adapter, get_crossencoder_encoding, get_biencoder_encoding, eng_adapter
 import numpy as np
 import torch.nn as nn
 import torch
@@ -20,31 +22,49 @@ import os
 import warnings
 import logging
 
+# license
+
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR)
 
-"""load english training and eval data"""
+"""Data Preprocessing"""
+
+# load english training and validation data
 eng_train_path = '../data/Track A/eng/eng_train.csv'
 eng_test_path = '../data/Track A/eng/eng_dev.csv'
-
 eng_training_data = load_data(eng_train_path)
 eng_test_data = load_data(eng_test_path)
 
-"""encoding for biencoder model"""
+# encoding for biencoder model
 eng_biencoder_training_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
 eng_biencoder_test_dataset = get_biencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
+# divide training dataset into training and validation dataset
+eng_biencoder_split = eng_biencoder_training_dataset.train_test_split(test_size=0.1, shuffle=True, seed=42)
 
-eng_biencoder_split = eng_biencoder_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
-
-"""encoding for crossencoder model"""
+# encoding for crossencoder model
 eng_crossencoder_training_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_training_data[["PairID", "pairs", "Score"]]))
 eng_crossencoder_test_dataset = get_crossencoder_encoding(Dataset.from_pandas(eng_test_data[['PairID', "pairs"]]))
+# divide training dataset into training and validation dataset
+eng_crossencoder_split = eng_crossencoder_training_dataset.train_test_split(test_size=0.1, shuffle=True, seed=42)
 
-eng_crossencoder_split = eng_crossencoder_training_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
 
-
-"""BiencoderNN and Baseline_BiencoderNN"""
 class BiEncoderNN(nn.Module):
+    """
+    Neural Network class for Bi-Encoder model.
+
+    Args:
+        transformer_model (nn.Module): Transformer model used in the bi-encoder.
+
+    Methods:
+        forward(input_ids1, attention_mask1, input_ids2, attention_mask2):
+            Forward pass of the bi-encoder model, computing similarity between two sets of inputs.
+
+        evaluate(eval_data, batch_size=32, loss_fn=nn.MSELoss()):
+            Evaluate the model on the provided evaluation data, computing perplexity, average loss, and Spearman correlation.
+
+        predict(test_data, output_path, batch_size=32):
+            Make predictions on the given test data and save results to a CSV file.
+    """
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
@@ -54,10 +74,10 @@ class BiEncoderNN(nn.Module):
         out2 = self.model(input_ids=input_ids2, attention_mask=attention_mask2).hidden_states[-1][:, 0, :]
 
         cos_similarity = F.cosine_similarity(out1, out2)
-        sim = (cos_similarity + 1) / 2
+        sim = (cos_similarity + 1) / 2  # transformation maps the cosine similarity range from [-1, 1] to [0, 1]
         return sim
 
-    def evaluate(self, eval_data, batch_size=20, loss_fn=nn.MSELoss()):
+    def evaluate(self, eval_data, batch_size=32, loss_fn=nn.MSELoss()):
         self.eval()
         all_predictions = []
         all_labels = []
@@ -65,7 +85,7 @@ class BiEncoderNN(nn.Module):
         test_input = get_batches(batch_size=batch_size, data=eval_data)
         batch_num = len(test_input)
 
-        with torch.no_grad():
+        with torch.no_grad():  # to avoid unnecessary memory consumption and computational
             for batch in tqdm(test_input, total=batch_num, desc="Evaluation", ncols=80):
                 input_ids1 = batch['t1_input_ids']
                 attention_mask1 = batch['t1_attention_mask']
@@ -83,7 +103,7 @@ class BiEncoderNN(nn.Module):
         spearman_corr, _ = spearmanr(all_predictions, all_labels)
         return perplexity, avg_loss, spearman_corr
 
-    def predict(self, test_data, output_path, batch_size=20):
+    def predict(self, test_data, output_path, batch_size=32):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -102,9 +122,9 @@ class BiEncoderNN(nn.Module):
                 scores.extend(outputs.cpu().numpy())
                 sample_ids.extend(batch['PairID'])
 
-        # Create a DataFrame with PairID and Pred_Score columns
-        result_df = pd.DataFrame({'PairID': sample_ids, 'Pred_Score': scores})
-        # Save the DataFrame to a CSV file
+        # create a DataFrame with PairID and Pred_Score columns
+        result_df = pd.DataFrame({'pairid': sample_ids, 'pred_score': scores})
+        # save the DataFrame to a CSV file
         directory = os.path.dirname(output_path)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -112,8 +132,24 @@ class BiEncoderNN(nn.Module):
 
         return scores, sample_ids
 
-"""CrossEncoderNN and Baseline_CrossencoderNN"""
+
 class CrossEncoderNN(nn.Module):
+    """
+    Neural Network class for Cross-Encoder model.
+
+    Args:
+        transformer_model (nn.Module): Transformer model used in the cross-encoder.
+
+    Methods:
+        forward(input_ids, attention_mask):
+            Forward pass of the cross-encoder model, applying a linear classifier with sigmoid activation.
+
+        evaluate(test_data, batch_size=32, loss_fn=nn.MSELoss()):
+            Evaluate the model on the provided test data, computing perplexity, average loss, and Spearman correlation.
+
+        predict(test_data, output_path, batch_size=32):
+            Make predictions on the given test data and save results to a CSV file.
+    """
     def __init__(self, transformer_model):
         super().__init__()
         self.model = transformer_model
@@ -125,7 +161,7 @@ class CrossEncoderNN(nn.Module):
         out = self.sigmoid(self.classifier(out)).squeeze()
         return out
 
-    def evaluate(self, test_data, batch_size=20, loss_fn=nn.MSELoss()):
+    def evaluate(self, test_data, batch_size=32, loss_fn=nn.MSELoss()):
         self.eval()
         all_predictions = []
         all_labels = []
@@ -152,7 +188,7 @@ class CrossEncoderNN(nn.Module):
 
         return perplexity, avg_loss, spearman_corr
 
-    def predict(self, test_data, output_path, batch_size=20):
+    def predict(self, test_data, output_path, batch_size=32):
         self.eval()
         test_input = get_batches(batch_size=batch_size, data=test_data)
         batch_num = len(test_input)
@@ -169,10 +205,8 @@ class CrossEncoderNN(nn.Module):
                 scores.extend(outputs.cpu().numpy())
                 sample_ids.extend(batch['PairID'])
 
-        # Create a DataFrame with PairID and Pred_Score columns
-        result_df = pd.DataFrame({'PairID': sample_ids, 'Pred_Score': scores})
+        result_df = pd.DataFrame({'pairid': sample_ids, 'pred_score': scores})
 
-        # Save the DataFrame to a CSV file
         directory = os.path.dirname(output_path)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -180,7 +214,10 @@ class CrossEncoderNN(nn.Module):
 
         return scores, sample_ids
 
-"""train model"""
+
+"""Training"""
+
+
 def train_model(model, model_type, model_save_name, train_data, val_data, loss_fn, batch_size=32, epochs=10, opt=None):
 
     if model_type == "biencoder":
@@ -217,13 +254,13 @@ def train_model(model, model_type, model_save_name, train_data, val_data, loss_f
             total_loss += loss.item()
         average_loss = total_loss/batch_num
 
-        # Evaluate and print accuracy at end of each epoch
+        # evaluate and print accuracy at end of each epoch
         validation_perplexity, validation_loss, validation_spearman_corr = model.evaluate(val_data)
 
-        # Log metrics to wandb
+        # log metrics to wandb
         wandb.log({"epoch": epoch+1,
                    "training average loss": average_loss,
-                   "Validation loss": validation_loss,
+                   "validation loss": validation_loss,
                    "validation_spearman_corr": validation_spearman_corr})
 
         # remember best model:
@@ -254,8 +291,9 @@ def train_model(model, model_type, model_save_name, train_data, val_data, loss_f
 
     return best_model
 
-def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
 
+def build_and_train(model_name, mini=False, lr=0.001, batch_size=32, epochs=10):
+    # train on mini or large dataset
     if mini == True:
         eng_biencoder_train = eng_biencoder_split['train'].select([i for i in range(100)])
         eng_biencoder_val = eng_biencoder_split['test'].select([i for i in range(10)])
@@ -264,7 +302,6 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_crossencoder_train = eng_crossencoder_split['train'].select([i for i in range(100)])
         eng_crossencoder_val = eng_crossencoder_split['test'].select([i for i in range(10)])
         eng_crossencoder_test = eng_crossencoder_test_dataset.select([i for i in range(5)])
-
     else:
         eng_biencoder_train = eng_biencoder_split['train']
         eng_biencoder_val = eng_biencoder_split['test']
@@ -274,9 +311,7 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_crossencoder_val = eng_crossencoder_split['test']
         eng_crossencoder_test = eng_crossencoder_test_dataset
 
-    """hyper params for training"""
-    loss_fn = nn.MSELoss()
-
+    # train with which model
     if model_name == "baseline_biencoder":
         bertmodel.set_active_adapters(None)
         model = BiEncoderNN(transformer_model=bertmodel)
@@ -288,7 +323,6 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_train = eng_biencoder_train
         eng_val = eng_biencoder_val
         eng_test = eng_biencoder_test
-
     elif model_name == "baseline_crossencoder":
         bertmodel.set_active_adapters(None)
         model = CrossEncoderNN(transformer_model=bertmodel)
@@ -300,12 +334,12 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_train = eng_crossencoder_train
         eng_val = eng_crossencoder_val
         eng_test = eng_crossencoder_test
-
     elif model_name == "biencoder":
-        # Set the adapters(la+ta) to be used in every forward pass
+        # set the adapters(la+ta) to be used in every forward pass
         bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
-        # Freeze all model weights except of those of task adapter
+        # freeze all model weights except of those of task adapter
         bertmodel.train_adapter(['STR'])
+
         model = BiEncoderNN(transformer_model=bertmodel)
         model_type = "biencoder"
         model_save_name = 'biencoder_model.pt'
@@ -315,12 +349,10 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_train = eng_biencoder_train
         eng_val = eng_biencoder_val
         eng_test = eng_biencoder_test
-
-
     elif model_name == "crossencoder":
-        # Set the adapters(la+ta) to be used in every forward pass
+        # set the adapters(la+ta) to be used in every forward pass
         bertmodel.set_active_adapters(ac.Stack(eng_adapter, "STR"))
-        # Freeze all model weights except of those of task adapter
+        # freeze all model weights except of those of task adapter
         bertmodel.train_adapter(['STR'])
 
         model = CrossEncoderNN(transformer_model=bertmodel)
@@ -333,32 +365,63 @@ def build_and_train(model_name, mini=False, lr=0.05, batch_size=16, epochs=10):
         eng_val = eng_crossencoder_val
         eng_test = eng_crossencoder_test
 
-
-    """train the model"""
-    # Initialize wandb
+    # initialize wandb
     wandb.init(project=project_name)
 
+    # hyperparameters
     opt = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = nn.MSELoss()
 
-    # train model
+    # train and get best model
     best_model = train_model(model, model_type, model_save_name, eng_train, eng_val, loss_fn, batch_size=batch_size, epochs=epochs, opt=opt)
+    # predict on the best model
     scores, sample_ids = best_model.predict(eng_test, output_path)
     print(f"MODEL NAME: {model_name}")
     print(f'scores:{scores}')
     print(f'sample_ids:{sample_ids}')
 
 
-
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="Initiate and Train Models")
-    # parser.add_argument("--model_name", type=str, required=True, choices=["baseline_biencoder", "baseline_crossencoder", "biencoder", "crossencoder"], help="the Name of the Model")
-    # parser.add_argument("--mini", type=bool, required=False, choices=[True, False], help="Train on Mini Dataset or Large")
-    # parser.add_argument("--mini", type=bool, required=False, choices=[True, False], help="Train on Mini Dataset or Large")
+    # parser.add_argument("--model_name", "-mn", type=str, required=True,
+    #                     choices=["baseline_biencoder", "baseline_crossencoder", "biencoder", "crossencoder"],
+    #                     help="the Name of the Model")
+    # parser.add_argument("--mini", "-mi", type=bool, required=True,
+    #                     choices=[True, False],
+    #                     help="Train on Mini Dataset or Large")
+    # parser.add_argument("--epochs", "-e", type=int, required=True,
+    #                     help="Number of training epochs")
+    # parser.add_argument("--batch_size", "-b", type=int, required=True,
+    #                     help="Batch size for training")
     # args = parser.parse_args()
-    # main(args.dataset_path, args.mini)
+    #
+    # build_and_train(args.model_name, args.mini, args.epochs, args.batch_size)
 
-    # build_and_train("baseline_biencoder", mini=True, epochs=1)
-    # build_and_train("baseline_crossencoder", mini=True, epochs=1)
-    # build_and_train("biencoder", mini=False, epochs=5)
-    build_and_train("crossencoder", mini=False, epochs=3)
+    """To execute this script in the terminal, use the following command as an example:"""
+    # Example: python Model/model_build.py -mn baseline_biencoder -mi True -e 3 -b 32
+    # not done yet, need to change path before run it in terminal
 
+    # test on mini dataset
+    # build_and_train("baseline_biencoder", mini=True, epochs=10)
+    # build_and_train("baseline_crossencoder", mini=True, epochs=10)
+    # build_and_train("biencoder", mini=True, epochs=10)
+    # build_and_train("crossencoder", mini=True, epochs=10)
+
+    # train on large dataset
+    build_and_train("baseline_biencoder")
+    build_and_train("baseline_crossencoder")
+    build_and_train("biencoder")
+    build_and_train("crossencoder")
+
+    """Our training results for each model on a large dataset can be found at:"""
+    # "baseline_biencoder"
+    # https://wandb.ai/lvertiefungcl2324_xinaohan/SemEval_BiEncoder_Baseline_eng/runs/105yhxfa?workspace=user-hanxinao
+
+    # "baseline_crossencoder"
+    # https://wandb.ai/lvertiefungcl2324_xinaohan/SemEval_CrossEncoder_Baseline_eng/runs/kq0f7l6r?workspace=user-hanxinao
+
+    # "biencoder"
+    # https://wandb.ai/lvertiefungcl2324_xinaohan/SemEval_BiEncoder_eng/runs/nwt89r1l?workspace=user-hanxinao
+
+    # "crossencoder"
+    # https://wandb.ai/lvertiefungcl2324_xinaohan/SemEval_CrossEncoder_eng/runs/t4golst5?workspace=user-hanxinao
