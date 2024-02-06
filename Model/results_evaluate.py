@@ -20,7 +20,7 @@ def evaluate_spearman(pred_file, gold_file):
         # merge
         merged_df = pd.merge(pred_df, gold_df, how='inner', on='PairID')
 
-        # 计算Spearman相关性
+        # calculate spearman corr
         spearman_corr = stats.spearmanr(merged_df['pred_score'], merged_df['gold_score'])[0]
 
         return spearman_corr
