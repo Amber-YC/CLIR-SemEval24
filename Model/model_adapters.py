@@ -9,14 +9,20 @@ from datasets import Dataset
 # from transformers import TrainingArguments, AdapterTrainer, EvalPrediction
 # from sentence_transformers import BiEncoder
 
+# license
+
+"""Load tokenizer"""
 # we must keep the pretrained-transformer of the tokenizer and model the same
-# Load tokenizer
 berttokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
 
 
-# Load pre-trained BERT model from Hugging Face Hub
+"""Load pre-trained BERT model from Hugging Face Hub"""
 # The `BertAdapterModel` class is specifically designed for working with adapters
 bertmodel = BertAdapterModel.from_pretrained("bert-base-multilingual-cased", output_hidden_states=True)
+
+
+"""Setup Adapters"""
+
 
 def set_lang_adapter(model, lang: str, non_linearity="relu", reduction_factor=2):
     """set language adapter for each language (eng, amh, arb, ind)
@@ -36,22 +42,25 @@ def set_lang_adapter(model, lang: str, non_linearity="relu", reduction_factor=2)
 
     """
     config = AdapterConfig.load("pfeiffer", non_linearity=non_linearity, reduction_factor=reduction_factor)
-    lang_adapter = model.load_adapter(lang, config=config, with_head=False) # language adapters are loaded but not activated
+    lang_adapter = model.load_adapter(lang, config=config, with_head=False)  # language adapters are loaded but not activated
     print(f"{lang} language adapter loaded.")
     return lang_adapter
-# add model as parameter
 
-"""add task adapter"""
+
+# add task adapter
 adapter_config = BnConfig(mh_adapter=False, output_adapter=True, reduction_factor=16, non_linearity="relu")
 task_adapter = bertmodel.add_adapter("STR", config=adapter_config)
-# bertmodel.add_classification_head("STR", num_labels=3)
 print("task adapter added.")
 
-# add language adapters
+
+# add language adapter
 eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
 arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp")
 amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp")
 ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp")
+
+
+"""Encoding Functions"""
 
 def encode_biencoder_batch(tidx, batch, tokenizer=berttokenizer):
     """Encodes a batch of input data using the model tokenizer. tidx= 0 if text1, tidx=1 if text2"""
@@ -61,15 +70,12 @@ def encode_biencoder_batch(tidx, batch, tokenizer=berttokenizer):
 
 
 def get_biencoder_encoding(dataset):
-
     t1_dataset = dataset.map(lambda x: encode_biencoder_batch(0, x), batched=True)
     t2_dataset = dataset.map(lambda x: encode_biencoder_batch(1, x), batched=True)
     dataset = dataset.add_column('t1_input_ids', t1_dataset["input_ids"])
     dataset = dataset.add_column('t1_attention_mask', t1_dataset["attention_mask"])
-    # dataset = dataset.add_column('t1_token_type_ids', t1_dataset["token_type_ids"])
     dataset = dataset.add_column('t2_input_ids', t2_dataset["input_ids"])
     dataset = dataset.add_column('t2_attention_mask', t2_dataset["attention_mask"])
-    # dataset = dataset.add_column('t2_token_type_ids', t2_dataset["token_type_ids"])
     if "Score" in dataset.column_names:
         dataset = dataset.rename_column("Score", "labels")
         dataset.set_format(type="torch", columns=['PairID', 't1_input_ids', 't1_attention_mask', 't2_input_ids', 't2_attention_mask', "labels"])
@@ -78,11 +84,13 @@ def get_biencoder_encoding(dataset):
 
     return dataset
 
+
 def encode_crossencoder_batch(batch, tokenizer=berttokenizer):
     """Encodes a batch of input pairs using the model tokenizer for the cross encoder model."""
     pairs = batch["pairs"]
     encode_text = tokenizer(pairs, max_length=300, truncation=True, padding="max_length", return_tensors="pt")
     return encode_text
+
 
 def get_crossencoder_encoding(dataset):
     encode_dataset = dataset.map(lambda x: encode_crossencoder_batch(x), batched=True)
@@ -116,7 +124,6 @@ if __name__ == "__main__":
     last_hidden_state_shape = batch_output.hidden_states[-1].size()
     print(batch_output)
     print("eng_last_hidden_size", last_hidden_state_shape)
-
 
     aim_file_ind = '../data/Track C/ind/ind_dev.csv'
     ind_data = load_data(aim_file_ind)[:5]
