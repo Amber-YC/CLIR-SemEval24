@@ -56,8 +56,8 @@ print("task adapter added.")
 # add language adapter
 eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
 arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp")
-amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp")
-ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp")
+amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp", reduction_factor=16)
+ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp", non_linearity='gelu')
 
 
 """Encoding Functions"""
