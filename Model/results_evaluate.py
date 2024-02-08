@@ -41,10 +41,12 @@ if __name__ == "__main__":
 
     # spearman correlation of eng
     gold_file_path = "../data/Track A/eng/eng_dev_with_labels.csv"
-    pred_files = ["/eng/eng_biencoder_baseline", "/eng/eng_crossencoder_baseline", "/eng/eng_biencoder", "/eng/eng_crossencoder"]
+    pred_files = ["/eng/eng_biencoder_baseline", "/eng/eng_biencoder_la", "/eng/eng_biencoder_la_ta",
+                  "/eng/eng_crossencoder_baseline", "/eng/eng_crossencoder_la", "/eng/eng_crossencoder_la_ta" ]
     spearman_corr(gold_file_path, pred_files)
 
     # spearman correlation of amh
     gold_file_path = "../data/Track A/amh/amh_dev_with_labels.csv"
-    pred_files = ["/amh/amh_biencoder_baseline", "/amh/amh_crossencoder_baseline", "/amh/amh_biencoder", "/amh/amh_crossencoder"]
+    pred_files = ["/amh/amh_biencoder_baseline", "/amh/amh_biencoder_la", "/amh/amh_biencoder_la_ta",
+                  "/amh/amh_crossencoder_baseline", "/amh/amh_crossencoder_la", "/amh/amh_crossencoder_la_ta"]
     spearman_corr(gold_file_path, pred_files)
