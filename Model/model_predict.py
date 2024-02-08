@@ -50,23 +50,22 @@ def main(lang):
     print(f"Run Fully Fine-Tuned BiEncoder Baseline Model without Adapters on {lang}: ")
     print(baseline_scores, baseline_sample_ids)
 
-    """CrossEncoder_Baseline"""
-    # encoding
-    crossencoder_dataset = get_crossencoder_encoding(dataset)
-    # create a CrossEncoderNN instance
-    crossencoder_baseline_model = CrossEncoderNN(bertmodel)
-    # load the fully fine-tuned bert model without adapters
-    loaded_model_state_dict = torch.load('../Model/crossencoder_baseline_model.pt')
-    crossencoder_baseline_model.load_state_dict(loaded_model_state_dict, strict=False)  # "strict=False" necessary, otherwise runtime error
-    # Baseline model without setting active any adapters
-    crossencoder_baseline_model.model.set_active_adapters(None)
+    """BiEncoder + LA"""
+    # create a BiEncoderNN instance
+    biencoder_model = BiEncoderNN(bertmodel)
+    # load the bert model with fine-tuned LA(eng) and TA(STR)
+    loaded_model_state_dict = torch.load('../Model/biencoder_model.pt')
+    biencoder_model.load_state_dict(loaded_model_state_dict)
+    # set active a specific LA
+    biencoder_model.model.set_active_adapters((ac.Stack(lang_adapter)))
 
     # predict and save the result
-    baseline_scores, baseline_sample_ids = crossencoder_baseline_model.predict(crossencoder_dataset, output_path=f'../result/{lang}/{lang}_crossencoder_baseline.csv')
-    print(f"Run Fully Fine-Tuned CrossEncoder Baseline Model without Adapters on {lang}: ")
-    print(baseline_scores, baseline_sample_ids)
+    biencoder_scores, biencoder_sample_ids = biencoder_model.predict(biencoder_dataset,
+                                                                     output_path=f'../result/{lang}/{lang}_biencoder_la.csv')
+    print(f"Run BiEncoder Model with Fine-Tuned LA on {lang}: ")
+    print(biencoder_scores, biencoder_sample_ids)
 
-    """BiEncoder"""
+    """BiEncoder + LA + TA"""
     # create a BiEncoderNN instance
     biencoder_model = BiEncoderNN(bertmodel)
     # load the bert model with fine-tuned LA(eng) and TA(STR)
@@ -76,11 +75,43 @@ def main(lang):
     biencoder_model.model.set_active_adapters((ac.Stack(lang_adapter, "STR")))
 
     # predict and save the result
-    biencoder_scores, biencoder_sample_ids = biencoder_model.predict(biencoder_dataset, output_path=f'../result/{lang}/{lang}_biencoder.csv')
+    biencoder_scores, biencoder_sample_ids = biencoder_model.predict(biencoder_dataset, output_path=f'../result/{lang}/{lang}_biencoder_la_ta.csv')
     print(f"Run BiEncoder Model with Fine-Tuned TA and LA on {lang}: ")
     print(biencoder_scores, biencoder_sample_ids)
 
-    """CrossEncoder"""
+    """CrossEncoder_Baseline"""
+    # encoding
+    crossencoder_dataset = get_crossencoder_encoding(dataset)
+    # create a CrossEncoderNN instance
+    crossencoder_baseline_model = CrossEncoderNN(bertmodel)
+    # load the fully fine-tuned bert model without adapters
+    loaded_model_state_dict = torch.load('../Model/crossencoder_baseline_model.pt')
+    crossencoder_baseline_model.load_state_dict(loaded_model_state_dict,
+                                                strict=False)  # "strict=False" necessary, otherwise runtime error
+    # Baseline model without setting active any adapters
+    crossencoder_baseline_model.model.set_active_adapters(None)
+
+    # predict and save the result
+    baseline_scores, baseline_sample_ids = crossencoder_baseline_model.predict(crossencoder_dataset,
+                                                                               output_path=f'../result/{lang}/{lang}_crossencoder_baseline.csv')
+    print(f"Run Fully Fine-Tuned CrossEncoder Baseline Model without Adapters on {lang}: ")
+    print(baseline_scores, baseline_sample_ids)
+
+    """CrossEncoder + LA"""
+    # create a CrossEncoderNN instance
+    crossencoder_model = CrossEncoderNN(bertmodel)
+    # load the bert model with fine-tuned LA(eng) and TA(STR)
+    loaded_model_state_dict = torch.load('../Model/crossencoder_model.pt')
+    crossencoder_model.load_state_dict(loaded_model_state_dict)
+    # set active a specific LA and the TA(STR)
+    crossencoder_model.model.set_active_adapters((ac.Stack(lang_adapter)))
+
+    # predict and save the result
+    crossencoder_scores, crossencoder_sample_ids = crossencoder_model.predict(crossencoder_dataset, output_path=f'../result/{lang}/{lang}_crossencoder_la.csv')
+    print(f"Run CrossEncoder Model with Fine-Tuned LA on {lang}: ")
+    print(crossencoder_scores, crossencoder_sample_ids)
+
+    """CrossEncoder + LA + TA"""
     # create a CrossEncoderNN instance
     crossencoder_model = CrossEncoderNN(bertmodel)
     # load the bert model with fine-tuned LA(eng) and TA(STR)
@@ -90,7 +121,8 @@ def main(lang):
     crossencoder_model.model.set_active_adapters((ac.Stack(lang_adapter, "STR")))
 
     # predict and save the result
-    crossencoder_scores, crossencoder_sample_ids = crossencoder_model.predict(crossencoder_dataset, output_path=f'../result/{lang}/{lang}_crossencoder.csv')
+    crossencoder_scores, crossencoder_sample_ids = crossencoder_model.predict(crossencoder_dataset,
+                                                                              output_path=f'../result/{lang}/{lang}_crossencoder_la_ta.csv')
     print(f"Run CrossEncoder Model with Fine-Tuned TA and LA on {lang}: ")
     print(crossencoder_scores, crossencoder_sample_ids)
 

@@ -32,7 +32,7 @@ def set_lang_adapter(model, lang: str, non_linearity="relu", reduction_factor=2)
             arb: ar/wiki@ukp
             amh: am/wiki@ukp
             ind: id/wiki@ukp
-    - non-linearity: relu for eng, arb, amh; gelu for ind
+    - non-linearity: relu for eng, amh; gelu for arb, ind
     - reduction_factor: 2 for eng, arb, ind; 16 for amh
 
     hyper_param:
@@ -54,10 +54,10 @@ print("task adapter added.")
 
 
 # add language adapter
-eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp")
-arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp")
-amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp", reduction_factor=16)
-ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp", non_linearity='gelu')
+eng_adapter = set_lang_adapter(bertmodel, "en/wiki@ukp", non_linearity='relu', reduction_factor=2)
+arb_adapter = set_lang_adapter(bertmodel, "ar/wiki@ukp", non_linearity='gelu', reduction_factor=2)
+amh_adapter = set_lang_adapter(bertmodel, "am/wiki@ukp", non_linearity='relu', reduction_factor=16)
+ind_adapter = set_lang_adapter(bertmodel, "id/wiki@ukp", non_linearity='gelu', reduction_factor=2)
 
 
 """Encoding Functions"""
