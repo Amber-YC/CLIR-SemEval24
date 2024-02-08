@@ -1,5 +1,6 @@
 import argparse
-
+import time
+import datetime
 from sklearn.model_selection import train_test_split
 from preprocessing import load_data, get_batches
 import model_adapters
@@ -292,7 +293,7 @@ def train_model(model, model_type, model_save_name, train_data, val_data, loss_f
     return best_model
 
 
-def build_and_train(model_name, mini=False, lr=0.001, batch_size=32, epochs=10):
+def build_and_train(model_name, mini=False, lr=0.01, batch_size=32, epochs=15):
     # train on mini or large dataset
     if mini == True:
         eng_biencoder_train = eng_biencoder_split['train'].select([i for i in range(100)])
@@ -373,7 +374,21 @@ def build_and_train(model_name, mini=False, lr=0.001, batch_size=32, epochs=10):
     loss_fn = nn.MSELoss()
 
     # train and get best model
+    t0 = time.time()
     best_model = train_model(model, model_type, model_save_name, eng_train, eng_val, loss_fn, batch_size=batch_size, epochs=epochs, opt=opt)
+    # log training time
+    t1 = time.time()
+    training_time = t1 - t0
+    elapsed_rounded = int(round((training_time)))
+    training_time = str(datetime.timedelta(seconds=elapsed_rounded))
+    print(f"========= Training time of {model_name} Model:", training_time, "==========")
+
+    # print model structure
+    # print("model structure:", model)
+    # print("model parameter sizes:")
+    # for name, parameters in best_model.named_parameters():
+    #     print(name, ':', parameters.size())
+
     # predict on the best model
     scores, sample_ids = best_model.predict(eng_test, output_path)
     print(f"MODEL NAME: {model_name}")
@@ -409,9 +424,9 @@ if __name__ == "__main__":
 
     # train on large dataset
     build_and_train("baseline_biencoder")
-    build_and_train("baseline_crossencoder")
-    build_and_train("biencoder")
-    build_and_train("crossencoder")
+    # build_and_train("baseline_crossencoder", mini=True)
+    # build_and_train("biencoder")
+    # build_and_train("crossencoder")
 
     """Our training results for each model on a large dataset can be found at:"""
     # "baseline_biencoder"

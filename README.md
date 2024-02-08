@@ -33,3 +33,5 @@ Considering the necessity for compatibility(**Bold**: supported by mBERT) with m
 2. Robert Litschko, Ivan Vulić, and Goran Glavaš. 2022. Parameter-Efficient Neural Reranking for Cross-Lingual and Multilingual Retrieval. In Proceedings of the 29th International Conference on Computational Linguistics, pages 1071–1082, Gyeongju, Republic of Korea. International Committee on Computational Linguistics.
 3. Yang, E., Nair, S., Lawrie, D.C., Mayfield, J., & Oard, D.W. (2022). Parameter-efficient Zero-shot Transfer for Cross-Language Dense Retrieval with Adapters. ArXiv, abs/2212.10448.
 4. Jonas Pfeiffer, Ivan Vuli´c, Iryna Gurevych, and Sebastian Ruder. 2020. MAD-X: An Adapter-Based Framework for Multi-Task Cross-Lingual Transfer. In Proceedings EMNLP, pages 7654–7673.
+
+
