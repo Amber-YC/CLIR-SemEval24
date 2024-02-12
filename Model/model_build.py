@@ -23,7 +23,6 @@ import os
 import warnings
 import logging
 
-# license
 
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR)

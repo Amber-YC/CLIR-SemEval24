@@ -13,7 +13,6 @@ import logging
 logging.basicConfig(level=logging.ERROR)
 warnings.filterwarnings("ignore")
 
-# license
 
 def main(lang):
     # load dataset

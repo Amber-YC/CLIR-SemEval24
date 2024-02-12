@@ -9,7 +9,6 @@ from datasets import Dataset
 # from transformers import TrainingArguments, AdapterTrainer, EvalPrediction
 # from sentence_transformers import BiEncoder
 
-# license
 
 """Load tokenizer"""
 # we must keep the pretrained-transformer of the tokenizer and model the same
