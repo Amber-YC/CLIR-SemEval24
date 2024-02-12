@@ -3,24 +3,21 @@ SemEval2024 Task1 Project
 # Zero-Shot Parameter-Efficient Cross-lingual Semantic Textual Relatedness Evaluation
 ## Background & Problem Statement
 The SemEval 2024 Task 1 focuses on Semantic Textual Relatedness (STR), challenging participants to automatically detecting the degree of semantic relatedness between sentence pairs across multiple languages, including low-resource ones like Afrikaans, Algerian Arabic, Amharic, Hausa, and others, which provides an opportunity to expand the focus of STR from English to more languages.  
-In this task, we consider a Zero-Shot Learning problem, wherein we are provided with monolingual sentence pairs from source languages with STR scoring and ranking, as well as unscored sentence pairs from other low-resource (even distant) target languages.  
-The objective during test time is to predict the scores and rank monolingual sentence pairs in unlabeled target languages, leveraging source language STR information. Based on cross-lingual word representations within a dense vector space, we aim  to implement a crosslingual STR evaluation and ranking system.
+In this task, we consider a Zero-Shot Learning problem, wherein we are provided with monolingual sentence pairs from source languages with STR scoring, as well as unscored sentence pairs from other low-resource (even distant) target languages.  
+The objective during test time is to predict the scores of monolingual sentence pairs in unlabeled target languages, leveraging source language STR information. Based on cross-lingual word representations within a dense vector space, we aim  to implement a crosslingual STR evaluation  system.
 
 ## Method
-**Encoder (mBERT):** Given the absence of parallel word or sentence pairs for cross-lingual alignment, we use mBERT, a Pretrained Massively Multilingual Transformer (MMT), as our encoder to acquire cross-lingual word representations in a dense vector space. Utilizing this, we derive sentence representations for each sentence.  
-**Adapter:** Inspired by parameter-efficient approaches to cross-lingual-transfer, instead of straightforward encoder fine-tuning, our key idea is to implement two adapter structures atop the Transformer (one Language Adapter, one language-neutral Task Adapter), enhancing the efficiency of the training process. This structure will acquire knowledge of the downstream task of semantic textual similarity ranking.  
-During the training process, sentence pairs from the source language are initially passed through a smaller Transformer (miniLM) layer. Subsequently, we stack pretrained Language Adapters for each of the train and evaluation languages over the transformer. Then we design and train a Task Adapter (Scoring Adapter) using source language data (English), with all Transformer and Language Adapter parameters frozen. Finally, we get the semantic relatedness scores of sentence pairs from the Task Adapter Structure. Finally the sentence pairs are then ranked in descending order based on these scores. 
+**Encoder (m-BERT):** Given the absence of parallel word or sentence pairs for cross-lingual alignment, we use mBERT, a Pretrained Massively Multilingual Transformer (MMT), as our encoder to acquire cross-lingual word representations in a dense vector space. Utilizing this, we derive sentence representations for each sentence.  
+**Adapter:** Inspired by parameter-efficient approaches to cross-lingual-transfer, instead of straightforward encoder fine-tuning, our key idea is to implement two adapter structures atop the Transformer (one Language Adapter, one language-neutral Task Adapter), enhancing the efficiency of the training process. This structure will acquire knowledge of the downstream task of semantic textual similarity detecting.  
+During the training process, sentence pairs from the source language are initially passed through a Transformer (m-BERT) layer. Subsequently, we stack pretrained Language Adapters for each of the train and evaluation languages over the transformer. Then we design and train a Task Adapter (Scoring Adapter) using source language data (English), with all Transformer and Language Adapter parameters frozen. Finally, we get the semantic relatedness scores of sentence pairs from the Task Adapter Structure. 
 
 ## Dataset
-We aim to train a model and perform automatic predictions using a portion of the data from Track A and Track C provided by SenEval 2024 Task 1. Specifically, we utilized labeled training set from Track A (where each row consists of PairID, Text, Score) to train the model, only updating parameters within LA. Subsequently, we use this trained model to predict the relatedness score for all sentence pairs in test set from Track C. The languages in Track A and C are as follows: 
-
->Track A. amh, arq, ary, **eng**, **esp**, hau, **mar**, **tel** \
->Track C. **afr**, amh, **arb**, arq, **eng**, **esp**, hau, **hin**, **mar**, **tel**
+We aim to train a model and perform automatic predictions using a portion of the data from Track A and Track C provided by SenEval 2024 Task 1. See https://github.com/semantic-textual-relatedness/Semantic_Relatedness_SemEval2024#citing-this-work for details.
 
 Considering the necessity for compatibility(**Bold**: supported by mBERT) with mBERT, following languages are used:
 
->Training data: eng, esp, mar, tel \
->Test Data: afr, arb, hin
+>Training data: eng \
+>Test Data: eng, amh, arb, ind \
 
 ### References
 *Zero-Shot Learning for Cross Lingual NLP Tasks:*
